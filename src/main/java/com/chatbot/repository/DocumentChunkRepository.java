@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 @Slf4j
@@ -24,52 +25,70 @@ public class DocumentChunkRepository {
     }
 
     /**
-     * Deletes all chunk records associated with the specified document name.
+     * Deletes all chunk records associated with the specified document name in metadata.
      */
     public void deleteByDocumentName(String documentName) {
-        String sql = "DELETE FROM document_chunks WHERE document_name = ?";
+        String sql = "DELETE FROM document_chunks WHERE metadata->>'document_name' = ?";
         int rows = jdbcTemplate.update(sql, documentName);
         log.debug("Deleted {} chunk rows for document: {}", rows, documentName);
     }
 
     /**
-     * Inserts a DocumentChunk record into SQLite.
+     * Inserts a DocumentChunk record into Supabase PostgreSQL.
      */
     public void save(DocumentChunk chunk) {
         try {
+            Map<String, Object> metadata = Map.of(
+                    "document_name", chunk.getDocumentName(),
+                    "chunk_index", chunk.getChunkIndex()
+            );
+            String metadataJson = objectMapper.writeValueAsString(metadata);
             String embeddingJson = objectMapper.writeValueAsString(chunk.getEmbedding());
+
             String sql = """
-                    INSERT INTO document_chunks (id, document_name, content, chunk_index, embedding)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO document_chunks (content, metadata, embedding)
+                    VALUES (?, CAST(? AS jsonb), CAST(? AS vector))
                     """;
             jdbcTemplate.update(sql, 
-                    chunk.getId(), 
-                    chunk.getDocumentName(), 
                     chunk.getContent(), 
-                    chunk.getChunkIndex(), 
+                    metadataJson, 
                     embeddingJson
             );
         } catch (Exception e) {
-            log.error("Failed to save DocumentChunk to database", e);
+            log.error("Failed to save DocumentChunk to Supabase database", e);
             throw new RuntimeException("Database error saving document chunk", e);
         }
     }
 
     /**
-     * Retrieves all DocumentChunks from the SQLite database.
+     * Performs a vector similarity search across all stored chunks in Supabase using pgvector.
      */
-    public List<DocumentChunk> findAll() {
-        String sql = "SELECT id, document_name, content, chunk_index, embedding FROM document_chunks";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> mapRowToChunk(rs));
+    public List<DocumentChunk> findSimilar(List<Double> queryEmbedding, int limit) {
+        try {
+            String embeddingJson = objectMapper.writeValueAsString(queryEmbedding);
+            String sql = """
+                    SELECT id, content, metadata, embedding
+                    FROM document_chunks
+                    ORDER BY embedding <=> CAST(? AS vector)
+                    LIMIT ?
+                    """;
+            return jdbcTemplate.query(sql, (rs, rowNum) -> mapRowToChunk(rs), embeddingJson, limit);
+        } catch (Exception e) {
+            log.error("Failed to perform vector similarity search in Supabase", e);
+            throw new RuntimeException("Database error during similarity search", e);
+        }
     }
 
     private DocumentChunk mapRowToChunk(ResultSet rs) throws SQLException {
         try {
             String id = rs.getString("id");
-            String docName = rs.getString("document_name");
             String content = rs.getString("content");
-            int index = rs.getInt("chunk_index");
+            String metadataJson = rs.getString("metadata");
             String embeddingJson = rs.getString("embedding");
+            
+            Map<String, Object> metadata = objectMapper.readValue(metadataJson, new TypeReference<Map<String, Object>>() {});
+            String docName = (String) metadata.get("document_name");
+            int index = ((Number) metadata.get("chunk_index")).intValue();
             
             List<Double> embedding = objectMapper.readValue(embeddingJson, new TypeReference<List<Double>>() {});
             

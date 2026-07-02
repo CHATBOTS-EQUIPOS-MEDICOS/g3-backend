@@ -21,6 +21,7 @@ public class GeminiService {
     private final String apiKey;
     private final String chatModel;
     private final String embeddingModel;
+    private final Integer embeddingDimensions;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
@@ -28,10 +29,12 @@ public class GeminiService {
             @Value("${gemini.api.key}") String apiKey,
             @Value("${gemini.model.chat}") String chatModel,
             @Value("${gemini.model.embedding}") String embeddingModel,
+            @Value("${gemini.model.embedding.dimensions:768}") Integer embeddingDimensions,
             ObjectMapper objectMapper) {
         this.apiKey = apiKey;
         this.chatModel = chatModel;
         this.embeddingModel = embeddingModel;
+        this.embeddingDimensions = embeddingDimensions;
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(15))
@@ -48,7 +51,7 @@ public class GeminiService {
         );
 
         Content content = new Content(List.of(new Part(text)), null);
-        EmbeddingRequest requestBody = new EmbeddingRequest("models/" + embeddingModel, content);
+        EmbeddingRequest requestBody = new EmbeddingRequest("models/" + embeddingModel, content, embeddingDimensions);
 
         try {
             String jsonPayload = objectMapper.writeValueAsString(requestBody);
