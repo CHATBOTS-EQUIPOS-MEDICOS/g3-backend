@@ -24,8 +24,6 @@ La conexión a la base de datos se realiza a través del **Connection Pooler (Su
 Crea un archivo `.env` en la raíz del proyecto (puedes tomar como base el archivo `.env.example`) y completa las variables de conexión con las credenciales de tu base de datos:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://lghsnanouiqxomqynbce.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_iZePSfzVScpfjSNSFEblSA_ld2yDao5
 
 # Configuración del Connection Pooler (Transaction Mode)
 DB_HOST=aws-1-us-east-2.pooler.supabase.com
@@ -68,100 +66,6 @@ Cuando un usuario sube un archivo PDF al backend, se activa el siguiente flujo d
    - Guarda cada fragmento en la tabla `document_chunks`, vinculando el `document_id` en el campo `metadata` JSONB.
    - Actualiza el estado del documento a `COMPLETED` (o `FAILED` si ocurre algún error).
 4. Cuando un documento es eliminado con un `DELETE`, se publica un **`DocumentDeletedEvent`**, el cual elimina asíncronamente todos los fragmentos y vectores de la tabla `document_chunks` que estén asociados a dicho documento mediante sus metadatos, además de eliminar el archivo físico en el bucket de Supabase Storage.
-
----
-
-## 🔌 API Endpoints (Manejo de Documentos)
-
-Todos los endpoints tienen como prefijo `/api/documents`:
-
-`POST /upload`
-
-- Sube un archivo PDF (Multipart form-data con clave file)
-
-Respuestas:
-
-**Caso de Éxito**
-:::highlight green
-202
-:::
-
-```js
-{
-    "id": "94d3a0e1-7d44-4bde-a379-3dc91561fdb7",
-    "name": "Documento.pdf",
-    "contentType": "application/pdf",
-    "sizeBytes": 69370,
-    "status": "PROCESSING",
-    "storagePath": "5438aa33-4ea5-4fbe-a67f-cdcb0545c4ce_Documento.pdf",
-    "createdAt": "2026-07-03T08:49:37.200251",
-    "updatedAt": "2026-07-03T08:49:37.200251"
-}
-```
-
-`GET`
-
-- Obtiene una lista de todos los documentos y su estado de procesamiento
-
-Respuestas:
-
-**Caso de Éxito**
-:::highlight green
-200
-:::
-
-```js
-[
-  {
-    id: "94d3a0e1-7d44-4bde-a379-3dc91561fdb7",
-    name: "Documento.pdf",
-    contentType: "application/pdf",
-    sizeBytes: 69370,
-    status: "COMPLETED",
-    storagePath: "5438aa33-4ea5-4fbe-a67f-cdcb0545c4ce_Documento.pdf",
-    createdAt: "2026-07-03T08:49:37.200251",
-    updatedAt: "2026-07-03T08:49:43.460799",
-  },
-];
-```
-
-`GET /{id}/download?inline=true`
-
-- Permite previsualizar o descargar el archivo PDF original de Supabase Storage.
-
-Parámetros:
-
-- inline (Boolean, opcional, por defecto false): Si es true, abre el PDF de forma interactiva en la pestaña del navegador. Si es false, fuerza la descarga directa del archivo.
-
-**Caso de Éxito**
-:::highlight green
-200
-:::
-
-```js
-{
-        "id": "94d3a0e1-7d44-4bde-a379-3dc91561fdb7",
-        "name": "Documento.pdf",
-        "contentType": "application/pdf",
-        "sizeBytes": 69370,
-        "status": "COMPLETED",
-        "storagePath": "5438aa33-4ea5-4fbe-a67f-cdcb0545c4ce_Documento.pdf",
-        "createdAt": "2026-07-03T08:49:37.200251",
-        "updatedAt": "2026-07-03T08:49:43.460799"
-    }
-
-```
-
-`DELETE /{id}`
-
-- Borra el documento y planifica la limpieza asíncrona de sus embeddings y archivo de almacenamiento correspondientes.
-
-Respuestas:
-
-**Caso de Éxito**
-:::highlight green
-204
-:::
 
 ---
 
