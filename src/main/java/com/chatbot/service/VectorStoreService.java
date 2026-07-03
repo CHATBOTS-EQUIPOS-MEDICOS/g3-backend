@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -25,7 +26,27 @@ public class VectorStoreService {
     }
 
     /**
-     * Saves a chunk and its vector embedding to the repository.
+     * Deletes all chunks associated with a document ID.
+     */
+    public void deleteByDocumentId(UUID documentId) {
+        repository.deleteByDocumentId(documentId);
+    }
+
+    /**
+     * Saves a chunk and its vector embedding to the repository, including document ID.
+     */
+    public void saveChunk(String documentName, String content, int chunkIndex, List<Double> embedding, UUID documentId) {
+        DocumentChunk chunk = DocumentChunk.builder()
+                .documentName(documentName)
+                .content(content)
+                .chunkIndex(chunkIndex)
+                .embedding(embedding)
+                .build();
+        repository.save(chunk, documentId);
+    }
+
+    /**
+     * Saves a chunk and its vector embedding to the repository (legacy fallback).
      */
     public void saveChunk(String documentName, String content, int chunkIndex, List<Double> embedding) {
         DocumentChunk chunk = DocumentChunk.builder()

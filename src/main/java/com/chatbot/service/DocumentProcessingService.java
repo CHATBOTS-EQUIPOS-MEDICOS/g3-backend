@@ -28,11 +28,10 @@ public class DocumentProcessingService {
 
     /**
      * Extracts text from a PDF document, splits it into overlapping chunks,
-     * generates embeddings using Gemini, and saves them to SQLite.
-     * Overwrites any existing chunks for a document with the same name.
+     * generates embeddings using Gemini, and saves them to Supabase with the document UUID.
      */
-    public int processPdf(String documentName, byte[] pdfBytes) throws IOException {
-        log.info("Processing PDF document: {}, bytes size: {}", documentName, pdfBytes.length);
+    public int processPdf(java.util.UUID documentId, String documentName, byte[] pdfBytes) throws IOException {
+        log.info("Processing PDF document: {}, UUID: {}, bytes size: {}", documentName, documentId, pdfBytes.length);
 
         // 1. Extract text from PDF using Apache PDFBox 3.x
         String extractedText;
@@ -69,7 +68,7 @@ public class DocumentProcessingService {
                         documentName, i + 1, chunk);
                 
                 List<Double> embedding = geminiService.getEmbedding(chunkWithHeader);
-                vectorStoreService.saveChunk(documentName, chunk, i, embedding);
+                vectorStoreService.saveChunk(documentName, chunk, i, embedding, documentId);
                 savedChunksCount++;
                 
                 // Print progress every 10 chunks to avoid output spam
@@ -84,6 +83,15 @@ public class DocumentProcessingService {
 
         log.info("Successfully finished processing and indexing document: {}. Saved {} chunks.", documentName, savedChunksCount);
         return savedChunksCount;
+    }
+
+    /**
+     * Extracts text from a PDF document, splits it into overlapping chunks,
+     * generates embeddings using Gemini, and saves them to SQLite.
+     * Overwrites any existing chunks for a document with the same name (legacy fallback).
+     */
+    public int processPdf(String documentName, byte[] pdfBytes) throws IOException {
+        return processPdf(java.util.UUID.randomUUID(), documentName, pdfBytes);
     }
 
     /**

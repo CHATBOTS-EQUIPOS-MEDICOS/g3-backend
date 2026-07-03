@@ -25,12 +25,49 @@ public class DocumentChunkRepository {
     }
 
     /**
+     * Deletes all chunk records associated with the specified document ID in metadata.
+     */
+    public void deleteByDocumentId(java.util.UUID documentId) {
+        String sql = "DELETE FROM document_chunks WHERE metadata->>'document_id' = ?";
+        int rows = jdbcTemplate.update(sql, documentId.toString());
+        log.debug("Deleted {} chunk rows for document ID: {}", rows, documentId);
+    }
+
+    /**
      * Deletes all chunk records associated with the specified document name in metadata.
      */
     public void deleteByDocumentName(String documentName) {
         String sql = "DELETE FROM document_chunks WHERE metadata->>'document_name' = ?";
         int rows = jdbcTemplate.update(sql, documentName);
         log.debug("Deleted {} chunk rows for document: {}", rows, documentName);
+    }
+
+    /**
+     * Inserts a DocumentChunk record into Supabase PostgreSQL, including document ID in metadata.
+     */
+    public void save(DocumentChunk chunk, java.util.UUID documentId) {
+        try {
+            Map<String, Object> metadata = Map.of(
+                    "document_name", chunk.getDocumentName(),
+                    "chunk_index", chunk.getChunkIndex(),
+                    "document_id", documentId.toString()
+            );
+            String metadataJson = objectMapper.writeValueAsString(metadata);
+            String embeddingJson = objectMapper.writeValueAsString(chunk.getEmbedding());
+
+            String sql = """
+                    INSERT INTO document_chunks (content, metadata, embedding)
+                    VALUES (?, CAST(? AS jsonb), CAST(? AS vector))
+                    """;
+            jdbcTemplate.update(sql, 
+                    chunk.getContent(), 
+                    metadataJson, 
+                    embeddingJson
+            );
+        } catch (Exception e) {
+            log.error("Failed to save DocumentChunk to Supabase database", e);
+            throw new RuntimeException("Database error saving document chunk", e);
+        }
     }
 
     /**
