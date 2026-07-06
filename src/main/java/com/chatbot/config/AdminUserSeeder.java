@@ -39,8 +39,19 @@ public class AdminUserSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (userRepository.findByEmail(adminEmail).isPresent()) {
+        java.util.List<User> adminUsers = userRepository.findAll().stream()
+                .filter(u -> adminEmail.equalsIgnoreCase(u.getEmail()))
+                .toList();
+
+        if (!adminUsers.isEmpty()) {
             logger.info("El usuario administrador '{}' ya está configurado en la base de datos.", adminEmail);
+            if (adminUsers.size() > 1) {
+                logger.warn("Se detectaron {} usuarios administradores duplicados en la base de datos. Limpiando...", adminUsers.size());
+                for (int i = 1; i < adminUsers.size(); i++) {
+                    userRepository.delete(adminUsers.get(i));
+                }
+                logger.info("Usuarios administradores duplicados limpiados correctamente.");
+            }
             return;
         }
 

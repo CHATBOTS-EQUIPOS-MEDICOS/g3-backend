@@ -317,3 +317,188 @@ Realiza una consulta semántica al chatbot. Genera el embedding de la pregunta, 
     "error": "Failed to answer the question: <detalle_del_error>"
   }
   ```
+
+---
+
+## 4. Historial de Chats (Sesiones y Conversaciones)
+
+Todos estos endpoints requieren que el usuario esté autenticado. El sistema extraerá el ID del usuario directamente desde el token JWT (cookie `token` o cabecera `Authorization`).
+
+### 4.1 Crear Sesión de Chat
+
+Crea una nueva conversación para el usuario autenticado.
+
+- **URL:** `/api/chat/sessions`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Usuario autenticado
+- **Content-Type:** `application/json`
+
+#### Cuerpo de la Petición (JSON)
+
+| Campo   | Tipo   | Requerido | Descripción                                                                           |
+| :------ | :----- | :-------- | :------------------------------------------------------------------------------------ |
+| `title` | String | No        | Título personalizado para el chat. Si se omite, se guarda como "Nueva Conversación". |
+
+##### Ejemplo de Cuerpo de Petición
+```json
+{
+  "title": "Mantenimiento Preventivo D100"
+}
+```
+
+#### Respuestas
+
+- **`200 OK` (Sesión Creada):**
+  ```json
+  {
+    "id": "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
+    "title": "Mantenimiento Preventivo D100",
+    "createdAt": "2026-07-06T10:05:00",
+    "updatedAt": "2026-07-06T10:05:00"
+  }
+  ```
+
+---
+
+### 4.2 Listar Sesiones de Chat
+
+Obtiene la lista de todas las sesiones de chat iniciadas por el usuario autenticado, ordenadas por la fecha de actualización más reciente.
+
+- **URL:** `/api/chat/sessions`
+- **Método HTTP:** `GET`
+- **Rol requerido:** Usuario autenticado
+
+#### Respuestas
+
+- **`200 OK`:**
+  ```json
+  [
+    {
+      "id": "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
+      "title": "Mantenimiento Preventivo D100",
+      "createdAt": "2026-07-06T10:05:00",
+      "updatedAt": "2026-07-06T10:05:25"
+    }
+  ]
+  ```
+
+---
+
+### 4.3 Listar Mensajes de una Sesión
+
+Obtiene el historial completo de mensajes y respuestas de una conversación específica. El sistema valida que la conversación pertenezca al usuario autenticado.
+
+- **URL:** `/api/chat/sessions/{sessionId}/messages`
+- **Método HTTP:** `GET`
+- **Rol requerido:** Usuario autenticado
+
+#### Parámetros
+
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                             |
+| :---------- | :-------- | :--- | :-------- | :-------------------------------------- |
+| `sessionId` | Path      | UUID | Sí        | Identificador único de la conversación. |
+
+#### Respuestas
+
+- **`200 OK`:**
+  ```json
+  [
+    {
+      "id": "bfa4429e-cd56-42d4-a0fb-4050b13cf0ea",
+      "role": "USER",
+      "content": "¿Cómo se calibra la pantalla del monitor multiparamétrico?",
+      "sources": null,
+      "createdAt": "2026-07-06T10:05:20"
+    },
+    {
+      "id": "d1a63cde-f1b2-4d2c-8ab5-f12b2a75908e",
+      "role": "MODEL",
+      "content": "Para calibrar la pantalla, ingrese al menú de servicio manteniendo presionado el botón 'Menú' durante 3 segundos...",
+      "sources": [
+        {
+          "documentName": "monitor_multiparametrico.pdf",
+          "chunkIndex": 3,
+          "snippet": "Para calibrar la pantalla, acceda al menú de servicio técnico..."
+        }
+      ],
+      "createdAt": "2026-07-06T10:05:25"
+    }
+  ]
+  ```
+
+---
+
+### 4.4 Preguntar en una Sesión de Chat
+
+Envía una pregunta dentro de una sesión de chat existente. Guarda la pregunta y la respuesta del chatbot (con sus fuentes y fragmentos citados) en la base de datos asociada a la sesión.
+
+Si el título actual de la sesión es "Nueva Conversación", el sistema actualizará automáticamente el título al texto de esta primera pregunta (truncado a 40 caracteres).
+
+- **URL:** `/api/chat/sessions/{sessionId}/ask`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Usuario autenticado
+- **Content-Type:** `application/json`
+
+#### Parámetros
+
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                             |
+| :---------- | :-------- | :--- | :-------- | :-------------------------------------- |
+| `sessionId` | Path      | UUID | Sí        | Identificador único de la conversación. |
+
+#### Cuerpo de la Petición (JSON)
+
+| Campo      | Tipo   | Requerido | Descripción                         |
+| :--------- | :----- | :-------- | :---------------------------------- |
+| `question` | String | Sí        | Pregunta del usuario sobre el chat. |
+
+##### Ejemplo de Cuerpo de Petición
+```json
+{
+  "question": "¿Cómo se calibra la pantalla del monitor multiparamétrico?"
+}
+```
+
+#### Respuestas
+
+- **`200 OK` (Respuesta Generada y Guardada):**
+  ```json
+  {
+    "answer": "Para calibrar la pantalla, ingrese al menú de servicio manteniendo presionado el botón 'Menú' durante 3 segundos...",
+    "sources": [
+      {
+        "documentName": "monitor_multiparametrico.pdf",
+        "chunkIndex": 3,
+        "snippet": "Para calibrar la pantalla, acceda al menú de servicio técnico..."
+      }
+    ]
+  }
+  ```
+
+- **`400 Bad Request` (Pregunta Vacía):**
+  ```json
+  {
+    "error": "The question field must not be empty."
+  }
+  ```
+
+---
+
+### 4.5 Eliminar Sesión de Chat
+
+Elimina una sesión de chat específica y todos sus mensajes asociados en cascada.
+
+- **URL:** `/api/chat/sessions/{sessionId}`
+- **Método HTTP:** `DELETE`
+- **Rol requerido:** Usuario autenticado
+
+#### Parámetros
+
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                     |
+| :---------- | :-------- | :--- | :-------- | :---------------------------------------------- |
+| `sessionId` | Path      | UUID | Sí        | Identificador único de la sesión a eliminar.    |
+
+#### Respuestas
+
+- **`204 No Content`:**
+  La sesión de chat e historial de mensajes asociados se han eliminado correctamente de la base de datos.
+

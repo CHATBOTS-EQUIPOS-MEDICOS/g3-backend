@@ -1,0 +1,370 @@
+{
+  "info": {
+    "_postman_id": "8b9e66db-6302-475a-a309-c124806a6c23",
+    "name": "Chatbot Equipos Medicos API",
+    "description": "Colección de endpoints para el Chatbot de Equipos Médicos, incluyendo autenticación, carga/descarga de documentos y el historial de chats del usuario.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Autenticación",
+      "item": [
+        {
+          "name": "Registrar Usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Juan Pérez\",\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"CLIENT\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registra un nuevo usuario en la plataforma. El rol por defecto es CLIENT si no se especifica."
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar Sesión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Inicia sesión y establece una cookie HttpOnly llamada 'token' en el navegador / cliente Postman."
+          },
+          "response": []
+        },
+        {
+          "name": "Cerrar Sesión",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/auth/logout",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Limpia la cookie del token JWT para cerrar la sesión."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Documentos",
+      "item": [
+        {
+          "name": "Subir Documento (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/documents/upload",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "upload"
+              ]
+            },
+            "description": "Sube un archivo PDF para extraer texto, dividirlo en fragmentos (chunks) y generar embeddings vectoriales con Gemini. Requiere rol de ADMIN."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Documentos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents"
+              ]
+            },
+            "description": "Lista todos los documentos cargados. Endpoint público, accesible para todos los usuarios."
+          },
+          "response": []
+        },
+        {
+          "name": "Descargar Documento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/7c3ad9a6-8be5-47e2-892f-dc71a25db9c2",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "7c3ad9a6-8be5-47e2-892f-dc71a25db9c2"
+              ]
+            },
+            "description": "Descarga los bytes originales de un documento PDF por su ID. Endpoint público, accesible para todos los usuarios."
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar Documento (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/7c3ad9a6-8be5-47e2-892f-dc71a25db9c2",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "7c3ad9a6-8be5-47e2-892f-dc71a25db9c2"
+              ]
+            },
+            "description": "Elimina el documento de la base de datos, limpia sus fragmentos vectoriales y borra el PDF de Supabase Storage. Requiere rol de ADMIN."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chatbot e Historial",
+      "item": [
+        {
+          "name": "Pregunta Pública (Anónima)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"¿Cuáles son las precauciones de seguridad del desfibrilador modelo D100?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/chat/ask",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "ask"
+              ]
+            },
+            "description": "Endpoint público para realizar consultas rápidas sin guardar historial en la base de datos."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Sesión de Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Mantenimiento Preventivo D100\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/chat/sessions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "sessions"
+              ]
+            },
+            "description": "Crea una nueva conversación para el usuario autenticado. Si el título se omite o está vacío, se creará como 'Nueva Conversación'."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Sesiones de Chat",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/chat/sessions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "sessions"
+              ]
+            },
+            "description": "Obtiene la lista de todas las conversaciones (sesiones de chat) creadas por el usuario autenticado, ordenadas por actualización más reciente."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Mensajes de una Sesión",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/chat/sessions/3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2/messages",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "sessions",
+                "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
+                "messages"
+              ]
+            },
+            "description": "Obtiene el historial completo de mensajes (preguntas y respuestas del bot con fuentes) de una sesión de chat específica."
+          },
+          "response": []
+        },
+        {
+          "name": "Preguntar en una Sesión de Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"¿Cómo se calibra la pantalla del monitor multiparamétrico?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/chat/sessions/3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2/ask",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "sessions",
+                "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
+                "ask"
+              ]
+            },
+            "description": "Envía una pregunta en una sesión de chat específica. Guarda la pregunta, ejecuta la búsqueda semántica RAG, genera la respuesta y la guarda junto con las fuentes citadas. Si la sesión tenía por título 'Nueva Conversación', actualizará automáticamente el título al texto de esta primera pregunta (truncado a 40 caracteres)."
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar Sesión de Chat",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/chat/sessions/3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "sessions",
+                "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2"
+              ]
+            },
+            "description": "Elimina una sesión de chat y todos sus mensajes asociados en cascada."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
