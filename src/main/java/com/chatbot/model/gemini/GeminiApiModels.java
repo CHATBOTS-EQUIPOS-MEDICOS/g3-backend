@@ -6,7 +6,7 @@ import java.util.List;
 
 public final class GeminiApiModels {
 
-    // --- EMBEDDING MODELS ---
+    // --- MODELOS DE EMBEDDING ---
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record EmbeddingRequest(
@@ -25,7 +25,7 @@ public final class GeminiApiModels {
         List<Double> values
     ) {}
 
-    // --- CHAT GENERATION MODELS ---
+    // --- MODELOS DE GENERACIÓN DE CHAT ---
 
     public record ChatRequest(
         List<Content> contents,
@@ -53,7 +53,7 @@ public final class GeminiApiModels {
         String finishReason
     ) {}
 
-    // --- COMMON MODELS ---
+    // --- MODELOS COMUNES ---
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Content(

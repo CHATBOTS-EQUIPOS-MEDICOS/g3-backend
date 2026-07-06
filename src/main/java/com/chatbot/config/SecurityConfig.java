@@ -40,6 +40,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/api/chat/**", "/error").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/documents/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/documents/upload").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/documents/**").hasRole("ADMIN")
                 .anyRequest().authenticated()

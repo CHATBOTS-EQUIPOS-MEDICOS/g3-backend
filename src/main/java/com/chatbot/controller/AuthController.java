@@ -38,10 +38,10 @@ public class AuthController {
         User user = authService.getUserByEmail(request.getEmail());
         String roleName = user.getId_rol().getNameRol().name();
 
-        // 1. Cookie HttpOnly for JWT token (Secure against XSS)
+        // 1. Cookie HttpOnly para el token JWT (Seguro contra XSS)
         Cookie tokenCookie = new Cookie("token", token);
         tokenCookie.setHttpOnly(true);
-        tokenCookie.setSecure(false); // false to support local testing on http://localhost
+        tokenCookie.setSecure(false); // false para soportar pruebas locales en http://localhost
         tokenCookie.setPath("/");
         tokenCookie.setMaxAge(86400); // 24 hours
         response.addCookie(tokenCookie);
@@ -58,7 +58,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<AuthResponse> logout(HttpServletResponse response) {
-        // Clear JWT token cookie
+        // Limpiar la cookie del token JWT
         Cookie tokenCookie = new Cookie("token", null);
         tokenCookie.setHttpOnly(true);
         tokenCookie.setSecure(false);

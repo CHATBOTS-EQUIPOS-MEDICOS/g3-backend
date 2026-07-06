@@ -37,7 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String token = null;
 
-        // Extract token from Cookie
+        // Extraer el token de la Cookie
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if ("token".equals(cookie.getName())) {
@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // Fallback: Check Authorization header (useful for testing or mobile integration)
+        // Alternativa: Verificar la cabecera Authorization (útil para pruebas o integración móvil)
         if (token == null) {
             final String authHeader = request.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -77,7 +77,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
                 }
             } catch (Exception e) {
-                // In case token is invalid, expired, or malformed, we just clear the context
+                // En caso de que el token sea inválido, esté expirado o malformado, simplemente limpiamos el contexto
                 SecurityContextHolder.clearContext();
             }
         }

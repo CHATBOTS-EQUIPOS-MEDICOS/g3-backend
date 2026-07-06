@@ -10,7 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(origins = "*") // Allow easy frontend connection
+@CrossOrigin(origins = "*") // Permitir una conexión sencilla desde el frontend
 @Slf4j
 public class ChatController {
 
@@ -25,8 +25,8 @@ public class ChatController {
     ) {}
 
     /**
-     * Endpoint to ask questions based on the uploaded medical equipment manuals.
-     * Expects a JSON payload like: { "question": "What is the battery capacity of Model X?" }
+     * Endpoint para realizar preguntas basadas en los manuales de equipos médicos subidos.
+     * Espera un cuerpo de petición JSON como: { "question": "¿Cuál es la capacidad de la batería del Modelo X?" }
      */
     @PostMapping("/ask")
     public ResponseEntity<?> askQuestion(@RequestBody AskRequest request) {

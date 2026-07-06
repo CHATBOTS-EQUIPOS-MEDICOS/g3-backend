@@ -17,7 +17,7 @@ public class DocumentProcessingService {
     private final GeminiService geminiService;
     private final VectorStoreService vectorStoreService;
 
-    // Target chunk settings
+    // Configuración de los fragmentos (chunks) objetivo
     private static final int CHUNK_SIZE = 1000; // characters
     private static final int OVERLAP = 200;     // characters
 
@@ -27,13 +27,13 @@ public class DocumentProcessingService {
     }
 
     /**
-     * Extracts text from a PDF document, splits it into overlapping chunks,
-     * generates embeddings using Gemini, and saves them to Supabase with the document UUID.
+     * Extrae texto de un documento PDF, lo divide en fragmentos (chunks) con superposición,
+     * genera embeddings utilizando Gemini y los guarda en Supabase con el UUID del documento.
      */
     public int processPdf(java.util.UUID documentId, String documentName, byte[] pdfBytes) throws IOException {
         log.info("Processing PDF document: {}, UUID: {}, bytes size: {}", documentName, documentId, pdfBytes.length);
 
-        // 1. Extract text from PDF using Apache PDFBox 3.x
+        // 1. Extraer texto del PDF utilizando Apache PDFBox 3.x
         String extractedText;
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             PDFTextStripper stripper = new PDFTextStripper();
@@ -47,14 +47,14 @@ public class DocumentProcessingService {
             throw new IllegalArgumentException("The uploaded PDF file does not contain any indexable text.");
         }
 
-        // 2. Chunk text using an intelligent sliding window
+        // 2. Fragmentar el texto utilizando una ventana deslizante inteligente
         List<String> chunks = chunkText(extractedText, CHUNK_SIZE, OVERLAP);
         log.info("Split document into {} chunks.", chunks.size());
 
-        // 3. Clear existing chunks for the same document to allow re-uploads
+        // 3. Limpiar los fragmentos existentes para el mismo documento para permitir re-cargas
         vectorStoreService.deleteByDocumentName(documentName);
 
-        // 4. Generate embeddings and save to database
+        // 4. Generar embeddings y guardar en la base de datos
         int savedChunksCount = 0;
         for (int i = 0; i < chunks.size(); i++) {
             String chunk = chunks.get(i).trim();
@@ -63,7 +63,7 @@ public class DocumentProcessingService {
             }
 
             try {
-                // Add context headers to help Gemini identify document sources
+                // Agregar cabeceras de contexto para ayudar a Gemini a identificar las fuentes del documento
                 String chunkWithHeader = String.format("Document: %s | Page Info/Chunk: %d | Text:\n%s", 
                         documentName, i + 1, chunk);
                 
@@ -71,13 +71,13 @@ public class DocumentProcessingService {
                 vectorStoreService.saveChunk(documentName, chunk, i, embedding, documentId);
                 savedChunksCount++;
                 
-                // Print progress every 10 chunks to avoid output spam
+                // Imprimir el progreso cada 10 fragmentos para evitar spam en la salida
                 if (savedChunksCount % 10 == 0) {
                     log.info("Generated embeddings for {}/{} chunks...", savedChunksCount, chunks.size());
                 }
             } catch (Exception e) {
                 log.error("Error creating embedding/saving chunk index {} for document {}", i, documentName, e);
-                // Continue processing other chunks but log error
+                // Continuar procesando otros fragmentos pero registrar el error
             }
         }
 
@@ -86,17 +86,17 @@ public class DocumentProcessingService {
     }
 
     /**
-     * Extracts text from a PDF document, splits it into overlapping chunks,
-     * generates embeddings using Gemini, and saves them to SQLite.
-     * Overwrites any existing chunks for a document with the same name (legacy fallback).
+     * Extrae el texto de un documento PDF, lo divide en fragmentos con superposición,
+     * genera embeddings utilizando Gemini y los guarda en SQLite.
+     * Sobrescribe cualquier fragmento existente para un documento con el mismo nombre (compatibilidad heredada).
      */
     public int processPdf(String documentName, byte[] pdfBytes) throws IOException {
         return processPdf(java.util.UUID.randomUUID(), documentName, pdfBytes);
     }
 
     /**
-     * Splits the text into chunks of roughly `chunkSize` characters with `overlap` characters.
-     * Tries to respect word boundaries by searching for spaces or newlines near the target splits.
+     * Divide el texto en fragmentos de aproximadamente `chunkSize` caracteres con una superposición de `overlap` caracteres.
+     * Intenta respetar los límites de las palabras buscando espacios o saltos de línea cerca de los cortes objetivos.
      */
     public List<String> chunkText(String text, int chunkSize, int overlap) {
         List<String> chunks = new ArrayList<>();
@@ -111,12 +111,12 @@ public class DocumentProcessingService {
             int end = start + chunkSize;
             
             if (end >= length) {
-                // Last chunk
+                // Último fragmento
                 chunks.add(text.substring(start));
                 break;
             }
 
-            // Look backward from end to find a space or newline (up to 100 characters back)
+            // Buscar hacia atrás desde el final para encontrar un espacio o salto de línea (hasta 100 caracteres hacia atrás)
             int boundaryIdx = end;
             int lookbackLimit = Math.max(start, end - 100);
             while (boundaryIdx > lookbackLimit) {
@@ -127,14 +127,14 @@ public class DocumentProcessingService {
                 boundaryIdx--;
             }
 
-            // If no separator was found, fallback to hard cutoff
+            // Si no se encontró separador, recurrir a un corte abrupto
             if (boundaryIdx == lookbackLimit) {
                 boundaryIdx = end;
             }
 
             chunks.add(text.substring(start, boundaryIdx));
             
-            // Advance start position accounting for overlap
+            // Avanzar la posición de inicio teniendo en cuenta la superposición
             int nextStart = boundaryIdx - overlap;
             if (nextStart <= start) {
                 nextStart = start + chunkSize - overlap;

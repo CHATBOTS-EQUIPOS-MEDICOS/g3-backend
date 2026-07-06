@@ -25,7 +25,7 @@ public class DocumentChunkRepository {
     }
 
     /**
-     * Deletes all chunk records associated with the specified document ID in metadata.
+     * Elimina todos los registros de fragmentos asociados al ID de documento especificado en los metadatos.
      */
     public void deleteByDocumentId(java.util.UUID documentId) {
         String sql = "DELETE FROM document_chunks WHERE metadata->>'document_id' = ?";
@@ -34,7 +34,7 @@ public class DocumentChunkRepository {
     }
 
     /**
-     * Deletes all chunk records associated with the specified document name in metadata.
+     * Elimina todos los registros de fragmentos asociados al nombre de documento especificado en los metadatos.
      */
     public void deleteByDocumentName(String documentName) {
         String sql = "DELETE FROM document_chunks WHERE metadata->>'document_name' = ?";
@@ -43,7 +43,7 @@ public class DocumentChunkRepository {
     }
 
     /**
-     * Inserts a DocumentChunk record into Supabase PostgreSQL, including document ID in metadata.
+     * Inserta un registro de DocumentChunk en PostgreSQL de Supabase, incluyendo el ID del documento en los metadatos.
      */
     public void save(DocumentChunk chunk, java.util.UUID documentId) {
         try {
@@ -71,7 +71,7 @@ public class DocumentChunkRepository {
     }
 
     /**
-     * Inserts a DocumentChunk record into Supabase PostgreSQL.
+     * Inserta un registro de DocumentChunk en PostgreSQL de Supabase.
      */
     public void save(DocumentChunk chunk) {
         try {
@@ -98,7 +98,7 @@ public class DocumentChunkRepository {
     }
 
     /**
-     * Performs a vector similarity search across all stored chunks in Supabase using pgvector.
+     * Realiza una búsqueda de similitud vectorial entre todos los fragmentos almacenados en Supabase utilizando pgvector.
      */
     public List<DocumentChunk> findSimilar(List<Double> queryEmbedding, int limit) {
         try {

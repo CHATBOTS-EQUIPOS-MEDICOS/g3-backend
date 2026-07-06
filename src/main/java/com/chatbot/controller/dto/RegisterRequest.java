@@ -27,5 +27,5 @@ public class RegisterRequest {
     @Size(min = 6, max = 50, message = "La contraseña debe tener entre 6 y 50 caracteres.")
     private String password;
 
-    private NameRol role; // Optional, defaults to CLIENT if null
+    private NameRol role; // Opcional, por defecto CLIENT si es nulo
 }

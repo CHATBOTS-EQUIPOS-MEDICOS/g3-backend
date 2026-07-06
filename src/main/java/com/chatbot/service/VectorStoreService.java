@@ -19,21 +19,21 @@ public class VectorStoreService {
     }
 
     /**
-     * Deletes all previous chunks associated with a document name.
+     * Elimina todos los fragmentos anteriores asociados a un nombre de documento.
      */
     public void deleteByDocumentName(String documentName) {
         repository.deleteByDocumentName(documentName);
     }
 
     /**
-     * Deletes all chunks associated with a document ID.
+     * Elimina todos los fragmentos asociados al ID de un documento.
      */
     public void deleteByDocumentId(UUID documentId) {
         repository.deleteByDocumentId(documentId);
     }
 
     /**
-     * Saves a chunk and its vector embedding to the repository, including document ID.
+     * Guarda un fragmento y su embedding vectorial en el repositorio, incluyendo el ID del documento.
      */
     public void saveChunk(String documentName, String content, int chunkIndex, List<Double> embedding, UUID documentId) {
         DocumentChunk chunk = DocumentChunk.builder()
@@ -46,7 +46,7 @@ public class VectorStoreService {
     }
 
     /**
-     * Saves a chunk and its vector embedding to the repository (legacy fallback).
+     * Guarda un fragmento y su embedding vectorial en el repositorio (compatibilidad heredada).
      */
     public void saveChunk(String documentName, String content, int chunkIndex, List<Double> embedding) {
         DocumentChunk chunk = DocumentChunk.builder()
@@ -59,7 +59,7 @@ public class VectorStoreService {
     }
 
     /**
-     * Performs a vector similarity search across all stored chunks in Supabase.
+     * Realiza una búsqueda de similitud vectorial en todos los fragmentos almacenados en Supabase.
      */
     public List<DocumentChunk> findSimilar(List<Double> queryEmbedding, int limit) {
         return repository.findSimilar(queryEmbedding, limit);

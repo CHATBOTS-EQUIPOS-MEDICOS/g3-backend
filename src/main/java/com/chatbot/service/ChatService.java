@@ -14,7 +14,7 @@ public class ChatService {
     private final GeminiService geminiService;
     private final VectorStoreService vectorStoreService;
 
-    // Retrieve top 5 matching text chunks for RAG context
+    // Recupera los 5 fragmentos de texto más similares para el contexto RAG
     private static final int TOP_K = 5;
 
     public ChatService(GeminiService geminiService, VectorStoreService vectorStoreService) {
@@ -34,20 +34,20 @@ public class ChatService {
     ) {}
 
     /**
-     * Answers the user's question using Retrieval-Augmented Generation (RAG).
-     * Retrieves the most relevant chunks from the uploaded manuals and uses
-     * Gemini to compile an answer restricted strictly to those manuals.
+     * Responde la pregunta del usuario utilizando Generación Aumentada por Recuperación (RAG).
+     * Recupera los fragmentos más relevantes de los manuales subidos y utiliza
+     * Gemini para compilar una respuesta restringida estrictamente a dichos manuales.
      */
     public ChatAnswer askQuestion(String question) {
         log.info("Answering user query: '{}'", question);
 
-        // 1. Get embedding for the user question
+        // 1. Obtener el embedding para la pregunta del usuario
         List<Double> queryEmbedding = geminiService.getEmbedding(question);
 
-        // 2. Query similar chunks in the SQLite database
+        // 2. Consultar fragmentos similares en la base de datos
         List<DocumentChunk> matchingChunks = vectorStoreService.findSimilar(queryEmbedding, TOP_K);
 
-        // If no manuals have been uploaded yet, inform the user
+        // Si aún no se han subido manuales, informar al usuario
         if (matchingChunks.isEmpty()) {
             return new ChatAnswer(
                 "No hay manuales cargados en el sistema. Por favor, sube archivos PDF de manuales de equipos médicos para comenzar a chatear.",
@@ -55,7 +55,7 @@ public class ChatService {
             );
         }
 
-        // 3. Assemble the prompt context
+        // 3. Ensamblar el contexto del prompt
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("Here is the context extracted from the medical equipment manuals:\n\n");
         
@@ -66,7 +66,7 @@ public class ChatService {
             contextBuilder.append(String.format("--- END OF TEXT FROM %s ---\n\n", chunk.getDocumentName()));
         }
 
-        // 4. Formulate the system instruction to force strict groundedness
+        // 4. Formular la instrucción del sistema para forzar respuestas estrictamente fundamentadas
         String systemInstruction = """
                 Eres un asistente virtual especializado en responder preguntas sobre manuales de equipos médicos.
                 
@@ -78,22 +78,22 @@ public class ChatService {
                 4. Responde en español de forma profesional y clara.
                 """;
 
-        // 5. Construct user prompt containing context and question
+        // 5. Construir el prompt de usuario conteniendo el contexto y la pregunta
         String userPrompt = String.format(
                 "CONTEXT:\n%s\n\nUSER QUESTION: %s\n\nANSWER:",
                 contextBuilder.toString(),
                 question
         );
 
-        // 6. Request answer completion from Gemini
+        // 6. Solicitar la generación de la respuesta a Gemini
         String answer = geminiService.generateAnswer(userPrompt, systemInstruction);
 
-        // 7. Compile the source metadata snippets for client citations
+        // 7. Compilar los fragmentos de metadatos de las fuentes para las citas del cliente
         List<SourceSnippet> sources = matchingChunks.stream()
                 .map(chunk -> new SourceSnippet(
                         chunk.getDocumentName(),
                         chunk.getChunkIndex() + 1,
-                        // Provide a short preview snippet of the content
+                        // Proporcionar un fragmento corto de previsualización del contenido
                         chunk.getContent().length() > 160 ? chunk.getContent().substring(0, 160) + "..." : chunk.getContent()
                 ))
                 .collect(Collectors.toList());
