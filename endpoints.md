@@ -201,7 +201,7 @@ Permite al usuario autenticado actualizar su nombre completo y/o su contraseña.
 ##### Ejemplo de Cuerpo de Petición (Actualizar Contraseña)
 ```json
 {
-  "oldPassword": "securepassword123",
+  "oldPassword": "securePassword123",
   "newPassword": "NewSecurePassword456"
 }
 ```
