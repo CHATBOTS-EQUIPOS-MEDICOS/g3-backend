@@ -34,7 +34,7 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.findFirstByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("El correo ya está registrado.");
         }
 
@@ -45,6 +45,7 @@ public class AuthService {
         User user = new User();
         user.setFullName(request.getFullName());
         user.setEmail(request.getEmail());
+       
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setId_rol(role);
 
@@ -59,7 +60,7 @@ public class AuthService {
     }
 
     public String login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findFirstByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Credenciales incorrectas."));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -70,7 +71,7 @@ public class AuthService {
     }
 
     public User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
+        return userRepository.findFirstByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
     }
 }

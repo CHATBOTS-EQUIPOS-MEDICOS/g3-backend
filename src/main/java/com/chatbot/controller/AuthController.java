@@ -46,12 +46,12 @@ public class AuthController {
         tokenCookie.setMaxAge(86400); // 24 hours
         response.addCookie(tokenCookie);
 
-        AuthResponse authResponse = AuthResponse.builder()
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .role(roleName)
-                .message("Sesión iniciada correctamente.")
-                .build();
+        AuthResponse authResponse = new AuthResponse(
+                user.getFullName(),
+                user.getEmail(),
+                roleName,
+                "Sesión iniciada correctamente."
+        );
 
         return ResponseEntity.ok(authResponse);
     }
@@ -66,9 +66,12 @@ public class AuthController {
         tokenCookie.setMaxAge(0); // Delete
         response.addCookie(tokenCookie);
 
-        AuthResponse authResponse = AuthResponse.builder()
-                .message("Sesión cerrada correctamente.")
-                .build();
+        AuthResponse authResponse = new AuthResponse(
+                null,
+                null,
+                null,
+                "Sesión cerrada correctamente."
+        );
 
         return ResponseEntity.ok(authResponse);
     }

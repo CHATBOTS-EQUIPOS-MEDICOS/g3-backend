@@ -36,22 +36,10 @@ public class AdminUserSeeder implements CommandLineRunner {
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
     }
-
     @Override
     public void run(String... args) {
-        java.util.List<User> adminUsers = userRepository.findAll().stream()
-                .filter(u -> adminEmail.equalsIgnoreCase(u.getEmail()))
-                .toList();
-
-        if (!adminUsers.isEmpty()) {
-            logger.info("El usuario administrador '{}' ya está configurado en la base de datos.", adminEmail);
-            if (adminUsers.size() > 1) {
-                logger.warn("Se detectaron {} usuarios administradores duplicados en la base de datos. Limpiando...", adminUsers.size());
-                for (int i = 1; i < adminUsers.size(); i++) {
-                    userRepository.delete(adminUsers.get(i));
-                }
-                logger.info("Usuarios administradores duplicados limpiados correctamente.");
-            }
+        if (!userRepository.findActiveByRole(NameRol.ADMIN).isEmpty()) {
+            logger.info("Ya existe al menos un usuario administrador activo en la base de datos.");
             return;
         }
 
