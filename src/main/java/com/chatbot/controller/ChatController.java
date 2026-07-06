@@ -10,7 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(origins = "*") // Allow easy frontend connection
+@CrossOrigin(origins = "http://localhost:4200") // Allow easy frontend connection
 @Slf4j
 public class ChatController {
 
