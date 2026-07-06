@@ -1,17 +1,9 @@
 package com.chatbot.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "role")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class Role {
     
     @Id
@@ -22,4 +14,28 @@ public class Role {
     @Enumerated(EnumType.STRING)
     @Column(name = "name", nullable = false, unique = true)
     private NameRol nameRol;
+
+    public Role() {
+    }
+
+    public Role(Long id, NameRol nameRol) {
+        this.id = id;
+        this.nameRol = nameRol;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public NameRol getNameRol() {
+        return nameRol;
+    }
+
+    public void setNameRol(NameRol nameRol) {
+        this.nameRol = nameRol;
+    }
 }
