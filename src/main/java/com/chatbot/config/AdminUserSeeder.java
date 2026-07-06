@@ -39,8 +39,8 @@ public class AdminUserSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (userRepository.findByEmail(adminEmail).isPresent()) {
-            logger.info("El usuario administrador '{}' ya está configurado en la base de datos.", adminEmail);
+        if (!userRepository.findActiveByRole(NameRol.ADMIN).isEmpty()) {
+            logger.info("Ya existe al menos un usuario administrador activo en la base de datos.");
             return;
         }
 
