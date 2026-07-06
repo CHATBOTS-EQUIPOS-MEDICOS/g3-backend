@@ -47,10 +47,9 @@ public class ChatHistoryService {
 
         String sessionTitle = (title == null || title.trim().isEmpty()) ? "Nueva Conversación" : title.trim();
 
-        ChatSession session = ChatSession.builder()
-                .user(user)
-                .title(sessionTitle)
-                .build();
+        ChatSession session = new ChatSession();
+        session.setUser(user);
+        session.setTitle(sessionTitle);
 
         return sessionRepository.save(session);
     }
@@ -104,11 +103,10 @@ public class ChatHistoryService {
                 .orElseThrow(() -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
 
         // 1. Guardar el mensaje del usuario
-        ChatMessage userMessage = ChatMessage.builder()
-                .session(session)
-                .role("USER")
-                .content(question)
-                .build();
+        ChatMessage userMessage = new ChatMessage();
+        userMessage.setSession(session);
+        userMessage.setRole("USER");
+        userMessage.setContent(question);
         messageRepository.save(userMessage);
 
         // 2. Obtener la respuesta del RAG ChatService
@@ -116,20 +114,19 @@ public class ChatHistoryService {
 
         // Mapear los SourceSnippet de la respuesta a entidades ChatSource
         List<ChatSource> sources = chatAnswer.sources().stream()
-                .map(src -> ChatSource.builder()
-                        .documentName(src.documentName())
-                        .chunkIndex(src.chunkIndex())
-                        .snippet(src.snippet())
-                        .build())
+                .map(src -> new ChatSource(
+                        src.documentName(),
+                        src.chunkIndex(),
+                        src.snippet()
+                ))
                 .collect(Collectors.toList());
 
         // 3. Guardar el mensaje de respuesta de la IA (MODEL)
-        ChatMessage modelMessage = ChatMessage.builder()
-                .session(session)
-                .role("MODEL")
-                .content(chatAnswer.answer())
-                .sources(sources)
-                .build();
+        ChatMessage modelMessage = new ChatMessage();
+        modelMessage.setSession(session);
+        modelMessage.setRole("MODEL");
+        modelMessage.setContent(chatAnswer.answer());
+        modelMessage.setSources(sources);
         messageRepository.save(modelMessage);
 
         // 4. Si el título de la sesión es "Nueva Conversación", renombrarlo según la pregunta del usuario

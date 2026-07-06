@@ -1,10 +1,6 @@
 package com.chatbot.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -15,10 +11,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "chat_message")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class ChatMessage {
 
     @Id
@@ -42,4 +34,64 @@ public class ChatMessage {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public ChatMessage() {
+    }
+
+    public ChatMessage(UUID id, ChatSession session, String role, String content, List<ChatSource> sources, LocalDateTime createdAt) {
+        this.id = id;
+        this.session = session;
+        this.role = role;
+        this.content = content;
+        this.sources = sources;
+        this.createdAt = createdAt;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public ChatSession getSession() {
+        return session;
+    }
+
+    public void setSession(ChatSession session) {
+        this.session = session;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public List<ChatSource> getSources() {
+        return sources;
+    }
+
+    public void setSources(List<ChatSource> sources) {
+        this.sources = sources;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }
