@@ -140,6 +140,123 @@ Invalida la sesión del usuario eliminando la cookie de autenticación.
     }
     ```
 
+
+---
+
+### 1.4 Obtener Perfil del Usuario Logueado
+
+Obtiene la información del perfil del usuario autenticado actualmente a partir de su token JWT.
+
+- **URL:** `/api/users/me`
+- **Método HTTP:** `GET`
+- **Rol requerido:** Cualquier usuario autenticado.
+
+#### Respuestas
+
+- **`200 OK` (Consulta Exitosa):**
+  ```json
+  {
+    "email": "juan.perez@example.com",
+    "fullName": "Juan Pérez",
+    "role": "CLIENT"
+  }
+  ```
+
+- **`400 Bad Request` (Usuario desactivado o no encontrado):**
+  ```json
+  {
+    "error": "El usuario está desactivado."
+  }
+  ```
+
+- **`401 Unauthorized` (Token inválido, expirado o ausente):**
+  Retorna un cuerpo vacío con el estado `401`.
+
+---
+
+### 1.5 Actualizar Perfil de Usuario
+
+Permite al usuario autenticado actualizar su nombre completo y/o su contraseña. Si se desea cambiar la contraseña, se debe proveer la contraseña actual para verificar la identidad.
+
+- **URL:** `/api/users/me`
+- **Método HTTP:** `PUT`
+- **Rol requerido:** Cualquier usuario autenticado.
+- **Content-Type:** `application/json`
+
+#### Cuerpo de la Petición (JSON)
+
+| Campo         | Tipo   | Requerido | Descripción                                                                                           |
+| :------------ | :----- | :-------- | :---------------------------------------------------------------------------------------------------- |
+| `fullName`    | String | No        | Nuevo nombre completo del usuario (entre 3 y 100 caracteres).                                         |
+| `oldPassword` | String | No        | Contraseña actual (requerida únicamente si se incluye `newPassword`).                                 |
+| `newPassword` | String | No        | Nueva contraseña (entre 6 y 50 caracteres, debe incluir al menos un número, una mayúscula y minúscula).|
+
+##### Ejemplo de Cuerpo de Petición (Actualizar Nombre)
+```json
+{
+  "fullName": "Juan Carlos Pérez"
+}
+```
+
+##### Ejemplo de Cuerpo de Petición (Actualizar Contraseña)
+```json
+{
+  "oldPassword": "securepassword123",
+  "newPassword": "NewSecurePassword456"
+}
+```
+
+#### Respuestas
+
+- **`200 OK` (Actualización Exitosa):**
+  ```json
+  {
+    "email": "juan.perez@example.com",
+    "fullName": "Juan Carlos Pérez",
+    "role": "CLIENT"
+  }
+  ```
+
+- **`400 Bad Request` (Errores de Validación / Contraseña Incorrecta):**
+  - Ejemplo si la contraseña actual no coincide:
+    ```json
+    {
+      "error": "La contraseña actual es incorrecta."
+    }
+    ```
+  - Ejemplo si la nueva contraseña no cumple con los requisitos de seguridad:
+    ```json
+    {
+      "error": "La nueva contraseña debe contener al menos un número, una letra mayúscula y una letra minúscula."
+    }
+    ```
+
+---
+
+### 1.6 Desactivar Cuenta de Usuario
+
+Desactiva la cuenta del usuario autenticado (baja lógica). Cambia su estado a inactivo, registra la fecha de baja, y modifica su correo electrónico de forma genérica agregando la palabra `disabled` antes de la extensión del dominio para liberar el correo original.
+
+- **URL:** `/api/users/me`
+- **Método HTTP:** `DELETE`
+- **Rol requerido:** Cualquier usuario autenticado.
+
+#### Respuestas
+
+- **`200 OK` (Desactivación Exitosa):**
+  ```json
+  {
+    "message": "Cuenta desactivada exitosamente."
+  }
+  ```
+
+- **`400 Bad Request` (Usuario ya inactivo o no encontrado):**
+  ```json
+  {
+    "error": "El usuario ya se encuentra desactivado."
+  }
+  ```
+
 ---
 
 ## 2. Gestión de Documentos
