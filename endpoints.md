@@ -619,3 +619,246 @@ Elimina una sesión de chat específica y todos sus mensajes asociados en cascad
 - **`204 No Content`:**
   La sesión de chat e historial de mensajes asociados se han eliminado correctamente de la base de datos.
 
+---
+
+## 5. Soporte Técnico en Vivo y WebSockets
+
+Esta sección describe la API REST y la especificación de comunicación en tiempo real (WebSockets) para el chat de soporte técnico directo entre clientes y administradores.
+
+### 5.1 Solicitar Soporte Técnico (Cliente)
+
+Crea una sesión de chat de soporte en vivo y la asigna directamente al administrador por defecto del sistema. La sesión se inicia en estado `ACTIVE`.
+
+- **URL:** `/api/support/request`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Usuario autenticado
+
+#### Respuestas
+
+- **`200 OK` (Sesión Creada y Asignada):**
+  ```json
+  {
+    "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+    "userId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
+    "clientName": "Juan Pérez",
+    "supportId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+    "supportName": "Administrator",
+    "status": "ACTIVE",
+    "createdAt": "2026-07-07T11:32:00",
+    "assignedAt": "2026-07-07T11:32:00",
+    "closedAt": null
+  }
+  ```
+
+---
+
+### 5.2 Obtener Sesión de Soporte Activa (Cliente)
+
+Obtiene la sesión de soporte activa o en espera del cliente autenticado.
+
+- **URL:** `/api/support/sessions/active`
+- **Método HTTP:** `GET`
+- **Rol requerido:** Usuario autenticado
+
+#### Respuestas
+
+- **`200 OK` (Sesión Activa Encontrada):**
+  ```json
+  {
+    "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+    "userId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
+    "clientName": "Juan Pérez",
+    "supportId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+    "supportName": "Administrator",
+    "status": "ACTIVE",
+    "createdAt": "2026-07-07T11:32:00",
+    "assignedAt": "2026-07-07T11:32:00",
+    "closedAt": null
+  }
+  ```
+
+- **`204 No Content` (No hay sesión activa):**
+  Retorna estado `204` si el cliente no posee sesiones de soporte abiertas o activas.
+
+---
+
+### 5.3 Obtener Mensajes de una Sesión
+
+Obtiene el historial completo de mensajes en orden cronológico de una conversación de soporte.
+
+- **URL:** `/api/support/sessions/{sessionId}/messages`
+- **Método HTTP:** `GET`
+- **Rol requerido:** Usuario autenticado
+
+#### Respuestas
+
+- **`200 OK`:**
+  ```json
+  [
+    {
+      "id": "c1da3d5e-ef12-42da-91bc-ab34e56c1234",
+      "sessionId": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+      "senderId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
+      "senderType": "USER",
+      "content": "Hola, necesito ayuda técnica con el respirador",
+      "createdAt": "2026-07-07T11:33:10"
+    },
+    {
+      "id": "df23a41b-ca34-45ba-bc12-cd5ef7890aef",
+      "sessionId": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+      "senderId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "senderType": "ADMIN",
+      "content": "Buenas tardes Juan, ¿en qué te puedo asistir?",
+      "createdAt": "2026-07-07T11:33:45"
+    }
+  ]
+  ```
+
+---
+
+### 5.4 Finalizar Sesión de Soporte
+
+Cierra y marca una sesión de soporte como resuelta. Bloquea el envío de más mensajes.
+
+- **URL:** `/api/support/sessions/{sessionId}/close`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Usuario autenticado
+
+#### Respuestas
+
+- **`200 OK`:**
+  ```json
+  {
+    "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+    "userId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
+    "clientName": "Juan Pérez",
+    "supportId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+    "supportName": "Administrator",
+    "status": "RESOLVED",
+    "createdAt": "2026-07-07T11:32:00",
+    "assignedAt": "2026-07-07T11:32:00",
+    "closedAt": "2026-07-07T11:35:10"
+  }
+  ```
+
+---
+
+### 5.5 Obtener Chats Activos del Administrador (Admin)
+
+Obtiene una lista de todas las sesiones de soporte activas que están asignadas al administrador logueado en ese momento.
+
+- **URL:** `/api/support/sessions/admin/active`
+- **Método HTTP:** `GET`
+- **Rol requerido:** Administrador (`ADMIN`)
+
+#### Respuestas
+
+- **`200 OK`:**
+  ```json
+  [
+    {
+      "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+      "userId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
+      "clientName": "Juan Pérez",
+      "supportId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "supportName": "Administrator",
+      "status": "ACTIVE",
+      "createdAt": "2026-07-07T11:32:00",
+      "assignedAt": "2026-07-07T11:32:00",
+      "closedAt": null
+    }
+  ]
+  ```
+
+---
+
+### 5.6 Obtener Historial de Chats Cerrados del Administrador (Admin)
+
+Obtiene una lista de todas las sesiones de soporte finalizadas/cerradas (estados `RESOLVED` y `EXPIRED`) que estuvieron asignadas al administrador logueado.
+
+- **URL:** `/api/support/sessions/admin/history`
+- **Método HTTP:** `GET`
+- **Rol requerido:** Administrador (`ADMIN`)
+
+#### Respuestas
+
+- **`200 OK`:**
+  ```json
+  [
+    {
+      "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+      "userId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
+      "clientName": "Juan Pérez",
+      "supportId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "supportName": "Administrator",
+      "status": "RESOLVED",
+      "createdAt": "2026-07-07T11:32:00",
+      "assignedAt": "2026-07-07T11:32:00",
+      "closedAt": "2026-07-07T11:35:10"
+    }
+  ]
+  ```
+
+---
+
+### 5.7 Conectar al Chat de Soporte vía WebSocket
+
+Establece una conexión en tiempo real bidireccional para chatear.
+
+- **URL de Conexión:** `ws://localhost:8080/ws/support`
+- **Autenticación (Handshake):** Requiere un token JWT válido. Puede enviarse como cookie `token` o como parámetro de consulta de URL `?token=TU_JWT_TOKEN`.
+
+#### Protocolo de Mensajería JSON
+
+##### 5.6.6.1 Enviar Mensaje (Cliente)
+Envía un mensaje a la sesión activa del cliente.
+```json
+{
+  "type": "MESSAGE",
+  "content": "Hola, necesito asistencia."
+}
+```
+
+##### 5.6.6.2 Enviar Mensaje (Administrador)
+Envía un mensaje a un cliente específico indicando el `sessionId`.
+```json
+{
+  "type": "MESSAGE",
+  "sessionId": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+  "content": "Hola, ¿en qué te puedo ayudar?"
+}
+```
+
+##### 5.6.6.3 Mensaje Recibido (Ambas Partes)
+El servidor reenvía el mensaje en tiempo real con este formato:
+```json
+{
+  "type": "MESSAGE",
+  "id": "UUID_DEL_MENSAJE",
+  "sessionId": "UUID_DE_LA_SESION",
+  "senderId": "UUID_DEL_EMISOR",
+  "senderType": "USER", // o "ADMIN"
+  "content": "Contenido del mensaje",
+  "createdAt": "2026-07-07T11:33:10"
+}
+```
+
+##### 5.6.6.4 Notificación de Cierre de Sesión
+El servidor avisa que el chat fue cerrado por la otra parte o API REST.
+```json
+{
+  "type": "SESSION_CLOSED",
+  "sessionId": "UUID_DE_LA_SESION"
+}
+```
+
+##### 5.6.6.5 Mensaje de Error
+El servidor responde con este formato en caso de infracciones (como chatear sin una sesión activa o sobre una sesión cerrada).
+```json
+{
+  "type": "ERROR",
+  "message": "Error: La sesión de soporte está cerrada y no permite enviar más mensajes."
+}
+```
+
+
