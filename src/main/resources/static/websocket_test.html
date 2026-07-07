@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Soporte Técnico en Vivo - Test de WebSockets</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #121214;
+            color: #e1e1e6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: #1e1e24;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        h2 {
+            margin-top: 0;
+            color: #04d361;
+            border-bottom: 1px solid #29292e;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #29292e;
+            background: #121214;
+            color: #e1e1e6;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #04d361;
+            color: #000;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #06b254;
+        }
+        button.secondary {
+            background: #29292e;
+            color: #e1e1e6;
+        }
+        button.secondary:hover {
+            background: #323238;
+        }
+        button.danger {
+            background: #e04848;
+            color: #fff;
+        }
+        button.danger:hover {
+            background: #c53e3e;
+        }
+        .chat-box {
+            border: 1px solid #29292e;
+            height: 250px;
+            overflow-y: auto;
+            background: #121214;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            max-width: 80%;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .message.system {
+            background: #29292e;
+            color: #8f8f9e;
+            max-width: 100%;
+            text-align: center;
+            font-style: italic;
+        }
+        .message.user {
+            background: #00875f;
+            color: #fff;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .message.admin {
+            background: #8257e5;
+            color: #fff;
+            align-self: flex-start;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .status-badge.waiting { background: #fd951f; color: #000; }
+        .status-badge.active { background: #04d361; color: #000; }
+        .status-badge.resolved { background: #29292e; color: #8f8f9e; }
+        .status-badge.disconnected { background: #e04848; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <h1>Soporte Técnico en Vivo (Test de WebSocket)</h1>
+    <p style="color: #8f8f9e;">Utiliza esta interfaz para iniciar sesión como Cliente o Administrador y chatear a través de sockets.</p>
+
+    <div class="container">
+        <!-- SECCIÓN CLIENTE -->
+        <div class="card" id="client-card">
+            <h2>Panel de Cliente (Usuario)</h2>
+            
+            <div class="form-group" id="client-auth">
+                <label>Iniciar Sesión (Cliente)</label>
+                <input type="email" id="client-email" placeholder="Email" value="juan.perez@example.com">
+                <input type="password" id="client-password" placeholder="Contraseña" value="securepassword123" style="margin-top: 5px;">
+                <button onclick="login('client')" style="margin-top: 10px;">Login</button>
+            </div>
+
+            <div id="client-panel" style="display: none;">
+                <p>Bienvenido: <strong id="client-name">...</strong></p>
+                <div class="status-badge disconnected" id="client-status">Desconectado</div>
+                
+                <div class="form-group">
+                    <button onclick="requestSupport()">Solicitar Soporte Técnico</button>
+                    <button class="secondary" onclick="connectSocket('client')">Conectar Socket</button>
+                    <button class="danger" onclick="closeSupportSession('client')">Cerrar Sesión Chat</button>
+                </div>
+
+                <div class="chat-box" id="client-chat">
+                    <!-- Mensajes aquí -->
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="client-msg-input" placeholder="Escribe un mensaje..." onkeypress="handleKeyPress(event, 'client')">
+                    <button onclick="sendMessage('client')">Enviar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN ADMINISTRADOR -->
+        <div class="card" id="admin-card">
+            <h2>Panel de Administrador (Soporte)</h2>
+            
+            <div class="form-group" id="admin-auth">
+                <label>Iniciar Sesión (Admin)</label>
+                <input type="email" id="admin-email" placeholder="Email" value="admin@example.com">
+                <input type="password" id="admin-password" placeholder="Contraseña" value="admin123" style="margin-top: 5px;">
+                <button onclick="login('admin')" style="margin-top: 10px;">Login</button>
+            </div>
+
+            <div id="admin-panel" style="display: none;">
+                <p>Administrador: <strong id="admin-name">...</strong></p>
+                <div class="status-badge disconnected" id="admin-status">Desconectado</div>
+                
+                <div class="form-group">
+                    <button class="secondary" onclick="connectSocket('admin')">Conectar Socket</button>
+                    <button class="secondary" onclick="getWaitingSessions()">Ver Chats en Espera</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Chats en Espera:</label>
+                    <select id="waiting-sessions-select" onchange="onSelectWaitingSession()">
+                        <option value="">Selecciona un chat en espera...</option>
+                    </select>
+                    <button onclick="acceptWaitingSession()" style="margin-top: 5px;">Aceptar y Asignar Chat</button>
+                </div>
+
+                <div class="chat-box" id="admin-chat">
+                    <!-- Mensajes aquí -->
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="admin-msg-input" placeholder="Escribe un mensaje al cliente..." onkeypress="handleKeyPress(event, 'admin')">
+                    <button onclick="sendMessage('admin')">Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8080';
+        const WS_URL = 'ws://localhost:8080/ws/support';
+
+        let clientToken = null;
+        let adminToken = null;
+        let clientWs = null;
+        let adminWs = null;
+        let clientActiveSessionId = null;
+        let adminActiveSessionId = null;
+
+        async function login(role) {
+            const email = document.getElementById(`${role}-email`).value;
+            const password = document.getElementById(`${role}-password`).value;
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    alert("Error en login: " + (err.error || response.statusText));
+                    return;
+                }
+
+                // El backend devuelve una cookie HttpOnly, pero también podemos iniciar sesión obteniendo el perfil
+                // Si el backend es de cookies, las peticiones siguientes incluirán la cookie automáticamente.
+                // Sin embargo, para probar el websocket en entornos cruzados, vamos a ver si podemos obtener información del usuario.
+                const profileResponse = await fetch(`${BASE_URL}/api/users/me`);
+                if (profileResponse.ok) {
+                    const user = await profileResponse.json();
+                    document.getElementById(`${role}-name`).innerText = user.fullName;
+                    document.getElementById(`${role}-auth`).style.display = 'none';
+                    document.getElementById(`${role}-panel`).style.display = 'block';
+
+                    // Cargar el historial activo si es cliente
+                    if (role === 'client') {
+                        checkActiveSession();
+                    }
+                } else {
+                    // Si no tiene cookie directamente, intentemos de nuevo tras una pequeña espera o usando credenciales
+                    alert("Login exitoso. Por favor intenta de nuevo o asegúrate de que se guardó la cookie.");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Error de red.");
+            }
+        }
+
+        async function checkActiveSession() {
+            try {
+                const res = await fetch(`${BASE_URL}/api/support/sessions/active`);
+                if (res.status === 200) {
+                    const session = await res.json();
+                    clientActiveSessionId = session.id;
+                    updateStatusBadge('client', session.status);
+                    loadMessages('client', session.id);
+                } else {
+                    updateStatusBadge('client', 'disconnected');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function requestSupport() {
+            try {
+                const res = await fetch(`${BASE_URL}/api/support/request`, { method: 'POST' });
+                if (res.ok) {
+                    const session = await res.json();
+                    clientActiveSessionId = session.id;
+                    updateStatusBadge('client', session.status);
+                    addSystemMessage('client', `Solicitud creada. ID de sesión: ${session.id}. Esperando agente...`);
+                    connectSocket('client');
+                }
+            } catch (e) {
+                alert("Error al solicitar soporte: " + e.message);
+            }
+        }
+
+        async function closeSupportSession(role) {
+            const sessionId = role === 'client' ? clientActiveSessionId : adminActiveSessionId;
+            if (!sessionId) return;
+            try {
+                const res = await fetch(`${BASE_URL}/api/support/sessions/${sessionId}/close`, { method: 'POST' });
+                if (res.ok) {
+                    addSystemMessage(role, "Sesión cerrada correctamente.");
+                    if (role === 'client') {
+                        clientActiveSessionId = null;
+                        updateStatusBadge('client', 'RESOLVED');
+                    } else {
+                        adminActiveSessionId = null;
+                        updateStatusBadge('admin', 'RESOLVED');
+                        document.getElementById('admin-chat').innerHTML = '';
+                    }
+                }
+            } catch (e) {
+                alert("Error al cerrar sesión: " + e.message);
+            }
+        }
+
+        async function getWaitingSessions() {
+            try {
+                const res = await fetch(`${BASE_URL}/api/support/sessions/waiting`);
+                if (res.ok) {
+                    const list = await res.json();
+                    const select = document.getElementById('waiting-sessions-select');
+                    select.innerHTML = '<option value="">Selecciona un chat en espera...</option>';
+                    list.forEach(session => {
+                        const opt = document.createElement('option');
+                        opt.value = session.id;
+                        opt.innerText = `${session.clientName} (${session.createdAt})`;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                alert("Error al listar chats: " + e.message);
+            }
+        }
+
+        async function acceptWaitingSession() {
+            const select = document.getElementById('waiting-sessions-select');
+            const sessionId = select.value;
+            if (!sessionId) {
+                alert("Selecciona un chat de la lista.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${BASE_URL}/api/support/sessions/${sessionId}/accept`, { method: 'POST' });
+                if (res.ok) {
+                    const session = await res.json();
+                    adminActiveSessionId = session.id;
+                    updateStatusBadge('admin', 'ACTIVE');
+                    addSystemMessage('admin', `Chat aceptado con cliente: ${session.clientName}`);
+                    loadMessages('admin', session.id);
+                    connectSocket('admin');
+                }
+            } catch (e) {
+                alert("Error al aceptar chat: " + e.message);
+            }
+        }
+
+        async function loadMessages(role, sessionId) {
+            try {
+                const res = await fetch(`${BASE_URL}/api/support/sessions/${sessionId}/messages`);
+                if (res.ok) {
+                    const messages = await res.json();
+                    const chatBox = document.getElementById(`${role}-chat`);
+                    chatBox.innerHTML = '';
+                    messages.forEach(msg => {
+                        appendMessage(role, msg.senderType.toLowerCase(), msg.content);
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function connectSocket(role) {
+            // Dado que las cookies se envían automáticamente por el navegador en la misma URL,
+            // podemos simplemente conectarnos. Si hay problemas de cookies, se puede pasar el token por query param.
+            const ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                console.log(`Socket conectado para ${role}`);
+                updateStatusBadge(role, role === 'client' ? 'WAITING' : 'ACTIVE');
+                addSystemMessage(role, "Conectado al servidor en tiempo real.");
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log("WS Recibido:", data);
+
+                if (data.type === 'MESSAGE') {
+                    appendMessage(role, data.senderType.toLowerCase(), data.content);
+                } else if (data.type === 'SESSION_ACCEPTED') {
+                    if (role === 'client') {
+                        updateStatusBadge('client', 'ACTIVE');
+                        addSystemMessage('client', `El agente ${data.supportName} se ha unido al chat.`);
+                    }
+                } else if (data.type === 'SESSION_CLOSED') {
+                    updateStatusBadge(role, 'RESOLVED');
+                    addSystemMessage(role, "La sesión ha sido finalizada.");
+                } else if (data.type === 'NEW_WAITING_SESSION') {
+                    if (role === 'admin') {
+                        addSystemMessage('admin', `¡Nuevo cliente en espera!: ${data.clientName}`);
+                        getWaitingSessions(); // refrescar
+                    }
+                } else if (data.type === 'SESSION_CLAIMED') {
+                    if (role === 'admin') {
+                        getWaitingSessions(); // refrescar
+                    }
+                } else if (data.type === 'ERROR') {
+                    alert("Error Socket: " + data.message);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log(`Socket cerrado para ${role}`);
+                addSystemMessage(role, "Conexión de socket cerrada.");
+            };
+
+            if (role === 'client') {
+                clientWs = ws;
+            } else {
+                adminWs = ws;
+            }
+        }
+
+        function sendMessage(role) {
+            const ws = role === 'client' ? clientWs : adminWs;
+            const input = document.getElementById(`${role}-msg-input`);
+            const content = input.value.trim();
+
+            if (!content) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert("El socket no está conectado. Conéctalo primero.");
+                return;
+            }
+
+            const payload = {
+                type: 'MESSAGE',
+                content: content
+            };
+
+            if (role === 'admin') {
+                payload.sessionId = adminActiveSessionId;
+            }
+
+            ws.send(JSON.stringify(payload));
+            input.value = '';
+        }
+
+        function handleKeyPress(event, role) {
+            if (event.key === 'Enter') {
+                sendMessage(role);
+            }
+        }
+
+        function appendMessage(panelRole, senderType, content) {
+            const chatBox = document.getElementById(`${panelRole}-chat`);
+            const div = document.createElement('div');
+            div.className = `message ${senderType}`;
+            div.innerText = content;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addSystemMessage(panelRole, content) {
+            const chatBox = document.getElementById(`${panelRole}-chat`);
+            const div = document.createElement('div');
+            div.className = 'message system';
+            div.innerText = content;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function updateStatusBadge(role, status) {
+            const badge = document.getElementById(`${role}-status`);
+            badge.className = 'status-badge ' + status.toLowerCase();
+            badge.innerText = status;
+        }
+    </script>
+</body>
+</html>
