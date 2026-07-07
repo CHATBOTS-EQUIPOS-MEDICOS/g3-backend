@@ -88,14 +88,30 @@ public class GeminiService {
      * Generates text content using Gemini based on a user prompt and optional system instructions.
      */
     public String generateAnswer(String prompt, String systemText) {
+        return generateAnswer(prompt, null, null, systemText);
+    }
+
+    /**
+     * Generates text content using Gemini based on a user prompt, optional image data, and optional system instructions.
+     */
+    public String generateAnswer(String prompt, String imageBase64, String imageMimeType, String systemText) {
         String url = String.format(
                 "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
                 chatModel, apiKey
         );
 
-        Content userContent = Content.user(prompt);
+        Content userContent;
+        if (imageBase64 != null && imageMimeType != null) {
+            Blob blob = new Blob(imageMimeType, imageBase64);
+            Part imagePart = new Part(null, blob);
+            Part textPart = new Part(prompt, null);
+            userContent = new Content(List.of(textPart, imagePart), "user");
+        } else {
+            userContent = Content.user(prompt);
+        }
+
         SystemInstruction systemInstruction = systemText != null ? 
-                new SystemInstruction(List.of(new Part(systemText))) : null;
+                new SystemInstruction(List.of(new Part(systemText, null))) : null;
         GenerationConfig config = new GenerationConfig(0.2, "text/plain");
 
         ChatRequest requestBody = new ChatRequest(
@@ -138,5 +154,13 @@ public class GeminiService {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Failed to call Gemini Chat API", e);
         }
+    }
+
+    /**
+     * Interpreta la imagen proporcionada de un equipo médico para identificar modelos y problemas visibles.
+     */
+    public String describeImage(String imageBase64, String imageMimeType) {
+        String prompt = "Analiza detalladamente esta imagen de un equipo médico. Describe qué equipo es (marca y modelo si son visibles), y qué problema, código de error, luz de alarma o estado anómalo observas. Genera una descripción concisa orientada a buscar soluciones en manuales técnicos.";
+        return generateAnswer(prompt, imageBase64, imageMimeType, "Eres un asistente técnico experto en mantenimiento de equipos médicos.");
     }
 }

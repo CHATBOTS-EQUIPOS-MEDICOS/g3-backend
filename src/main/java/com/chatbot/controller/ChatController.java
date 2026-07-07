@@ -7,10 +7,14 @@ import com.chatbot.service.ChatHistoryService;
 import com.chatbot.service.ChatService;
 import com.chatbot.service.ChatService.ChatAnswer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +36,9 @@ public class ChatController {
     }
 
     public record AskRequest(
-        String question
+        String question,
+        String imageBase64,
+        String imageMimeType
     ) {}
 
     // DTOs de salida seguros para evitar recursión y problemas de Lazy Loading de Hibernate
@@ -56,6 +62,8 @@ public class ChatController {
         UUID id,
         String role,
         String content,
+        String imageBase64,
+        String imageMimeType,
         List<ChatSource> sources,
         LocalDateTime createdAt
     ) {
@@ -64,6 +72,8 @@ public class ChatController {
                 message.getId(),
                 message.getRole(),
                 message.getContent(),
+                message.getImageBase64(),
+                message.getImageMimeType(),
                 message.getSources(),
                 message.getCreatedAt()
             );
@@ -85,15 +95,39 @@ public class ChatController {
      * Endpoint público para realizar preguntas rápidas y anónimas basadas en los manuales de equipos médicos subidos.
      * No guarda historial de chat.
      */
-    @PostMapping("/ask")
-    public ResponseEntity<?> askQuestion(@RequestBody AskRequest request) {
-        if (request == null || request.question() == null || request.question().strip().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "The question field must not be empty."));
+    @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> askQuestion(
+            @RequestParam(value = "question", required = false) String question,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        boolean hasQuestion = question != null && !question.strip().isEmpty();
+        boolean hasFile = file != null && !file.isEmpty();
+
+        if (!hasQuestion && !hasFile) {
+            return ResponseEntity.badRequest().body(Map.of("error", "The question or image file must be provided."));
+        }
+
+        String imageBase64 = null;
+        String imageMimeType = null;
+
+        if (hasFile) {
+            imageMimeType = file.getContentType();
+            try {
+                imageBase64 = java.util.Base64.getEncoder().encodeToString(file.getBytes());
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Error al procesar el archivo de imagen: " + e.getMessage()));
+            }
         }
 
         try {
-            ChatAnswer answer = chatService.askQuestion(request.question().trim());
+            ChatAnswer answer = chatService.askQuestion(
+                hasQuestion ? question.trim() : null,
+                imageBase64,
+                imageMimeType
+            );
             return ResponseEntity.ok(answer);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error al procesar la pregunta de chat pública", e);
             return ResponseEntity.internalServerError().body(Map.of(
@@ -141,16 +175,43 @@ public class ChatController {
      * Realiza una pregunta dentro de una sesión de chat específica. Guarda la pregunta,
      * realiza el RAG y guarda la respuesta de la IA en la base de datos asociada a la sesión.
      */
-    @PostMapping("/sessions/{sessionId}/ask")
-    public ResponseEntity<?> askInSession(@PathVariable UUID sessionId, @RequestBody AskRequest request) {
-        if (request == null || request.question() == null || request.question().strip().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "The question field must not be empty."));
+    @PostMapping(value = "/sessions/{sessionId}/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> askInSession(
+            @PathVariable UUID sessionId,
+            @RequestParam(value = "question", required = false) String question,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        boolean hasQuestion = question != null && !question.strip().isEmpty();
+        boolean hasFile = file != null && !file.isEmpty();
+
+        if (!hasQuestion && !hasFile) {
+            return ResponseEntity.badRequest().body(Map.of("error", "The question or image file must be provided."));
+        }
+
+        String imageBase64 = null;
+        String imageMimeType = null;
+
+        if (hasFile) {
+            imageMimeType = file.getContentType();
+            try {
+                imageBase64 = java.util.Base64.getEncoder().encodeToString(file.getBytes());
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Error al procesar el archivo de imagen: " + e.getMessage()));
+            }
         }
 
         UUID userId = getAuthenticatedUserId();
         try {
-            ChatAnswer answer = chatHistoryService.askInSession(userId, sessionId, request.question().trim());
+            ChatAnswer answer = chatHistoryService.askInSession(
+                userId,
+                sessionId,
+                hasQuestion ? question.trim() : null,
+                imageBase64,
+                imageMimeType
+            );
             return ResponseEntity.ok(answer);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error al procesar la pregunta de chat dentro de la sesión {}", sessionId, e);
             return ResponseEntity.internalServerError().body(Map.of(

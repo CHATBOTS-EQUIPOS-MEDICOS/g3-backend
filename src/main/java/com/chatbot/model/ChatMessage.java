@@ -27,6 +27,12 @@ public class ChatMessage {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "image_base64", columnDefinition = "TEXT")
+    private String imageBase64;
+
+    @Column(name = "image_mime_type", length = 100)
+    private String imageMimeType;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "sources")
     private List<ChatSource> sources;
@@ -38,11 +44,13 @@ public class ChatMessage {
     public ChatMessage() {
     }
 
-    public ChatMessage(UUID id, ChatSession session, String role, String content, List<ChatSource> sources, LocalDateTime createdAt) {
+    public ChatMessage(UUID id, ChatSession session, String role, String content, String imageBase64, String imageMimeType, List<ChatSource> sources, LocalDateTime createdAt) {
         this.id = id;
         this.session = session;
         this.role = role;
         this.content = content;
+        this.imageBase64 = imageBase64;
+        this.imageMimeType = imageMimeType;
         this.sources = sources;
         this.createdAt = createdAt;
     }
@@ -77,6 +85,22 @@ public class ChatMessage {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getImageBase64() {
+        return imageBase64;
+    }
+
+    public void setImageBase64(String imageBase64) {
+        this.imageBase64 = imageBase64;
+    }
+
+    public String getImageMimeType() {
+        return imageMimeType;
+    }
+
+    public void setImageMimeType(String imageMimeType) {
+        this.imageMimeType = imageMimeType;
     }
 
     public List<ChatSource> getSources() {
