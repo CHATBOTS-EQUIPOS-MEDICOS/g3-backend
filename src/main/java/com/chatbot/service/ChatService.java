@@ -76,6 +76,7 @@ public class ChatService {
                 2. Si la información necesaria para responder la pregunta no está en el contexto, debes decir exactamente lo siguiente (o variaciones muy cercanas): "Lo siento, la respuesta a esa pregunta no se encuentra en los manuales de equipos médicos disponibles."
                 3. No intentes adivinar, asumir ni inventar nada que no esté en el texto suministrado. No utilices tu conocimiento general pre-entrenado para rellenar vacíos.
                 4. Responde en español de forma profesional y clara.
+                5. Si la pregunta del usuario es general, vaga o ambigua, y podría aplicar a múltiples equipos médicos diferentes de los que se encuentran en el contexto (por ejemplo, si el usuario dice "necesito el manual", "cómo se enciende", "código de error", etc., sin especificar el modelo o equipo), NO intentes responder con información de todos los equipos a la vez ni adivinando a cuál se refiere. En su lugar, debes responder de manera breve y directa pidiendo aclaración sobre a cuál de los equipos se refiere (por ejemplo: "¿De qué equipo?", "¿Qué manual?", o "¿Qué ventilador?", adaptando la repregunta según los equipos que identifiques en el contexto).
                 """;
 
         // 5. Construir el prompt de usuario conteniendo el contexto y la pregunta
