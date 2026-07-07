@@ -38,6 +38,8 @@ public class SupportSession {
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
+    
+    //GETTERS AND SETTERS
 
     public SupportSession() {
     }
