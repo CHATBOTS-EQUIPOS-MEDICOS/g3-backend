@@ -39,12 +39,51 @@ public class ChatService {
      * Gemini para compilar una respuesta restringida estrictamente a dichos manuales.
      */
     public ChatAnswer askQuestion(String question) {
-        log.info("Answering user query: '{}'", question);
+        return askQuestion(question, null, null);
+    }
 
-        // 1. Obtener el embedding para la pregunta del usuario
-        List<Double> queryEmbedding = geminiService.getEmbedding(question);
+    public ChatAnswer askQuestion(String question, String imageBase64, String imageMimeType) {
+        log.info("Answering user query: '{}', with image: {}", question, (imageBase64 != null));
 
-        // 2. Consultar fragmentos similares en la base de datos
+        // Validar formato de imagen si se proporciona
+        if (imageBase64 != null && imageMimeType != null) {
+            String mimeLower = imageMimeType.toLowerCase().trim();
+            if (!mimeLower.equals("image/png") && 
+                !mimeLower.equals("image/jpeg") && 
+                !mimeLower.equals("image/jpg") && 
+                !mimeLower.equals("image/webp")) {
+                throw new IllegalArgumentException("Formato de imagen no permitido. Solo se permiten PNG, JPG, JPEG y WEBP.");
+            }
+        }
+
+        // 1. Obtener la descripción de la imagen si está presente
+        String imageDescription = null;
+        if (imageBase64 != null && imageMimeType != null) {
+            imageDescription = geminiService.describeImage(imageBase64, imageMimeType);
+            log.info("Image interpretation: {}", imageDescription);
+        }
+
+        // 2. Construir la consulta para el vector store
+        String searchContextQuery = "";
+        if (imageDescription != null) {
+            searchContextQuery += imageDescription;
+        }
+        if (question != null && !question.trim().isEmpty()) {
+            if (!searchContextQuery.isEmpty()) {
+                searchContextQuery += " ";
+            }
+            searchContextQuery += question.trim();
+        }
+
+        // Si no hay pregunta ni imagen, lanzar error
+        if (searchContextQuery.isEmpty()) {
+            throw new IllegalArgumentException("Se requiere una pregunta o una imagen para procesar.");
+        }
+
+        // 3. Obtener el embedding para la búsqueda contextual
+        List<Double> queryEmbedding = geminiService.getEmbedding(searchContextQuery);
+
+        // 4. Consultar fragmentos similares en la base de datos
         List<DocumentChunk> matchingChunks = vectorStoreService.findSimilar(queryEmbedding, TOP_K);
 
         // Si aún no se han subido manuales, informar al usuario
@@ -55,7 +94,7 @@ public class ChatService {
             );
         }
 
-        // 3. Ensamblar el contexto del prompt
+        // 5. Ensamblar el contexto del prompt
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("Here is the context extracted from the medical equipment manuals:\n\n");
         
@@ -66,7 +105,7 @@ public class ChatService {
             contextBuilder.append(String.format("--- END OF TEXT FROM %s ---\n\n", chunk.getDocumentName()));
         }
 
-        // 4. Formular la instrucción del sistema para forzar respuestas estrictamente fundamentadas
+        // 6. Formular la instrucción del sistema para forzar respuestas estrictamente fundamentadas
         String systemInstruction = """
                 Eres un asistente virtual especializado en responder preguntas sobre manuales de equipos médicos.
                 
@@ -76,19 +115,23 @@ public class ChatService {
                 2. Si la información necesaria para responder la pregunta no está en el contexto, debes decir exactamente lo siguiente (o variaciones muy cercanas): "Lo siento, la respuesta a esa pregunta no se encuentra en los manuales de equipos médicos disponibles."
                 3. No intentes adivinar, asumir ni inventar nada que no esté en el texto suministrado. No utilices tu conocimiento general pre-entrenado para rellenar vacíos.
                 4. Responde en español de forma profesional y clara.
+                5. Si la pregunta del usuario es general, vaga o ambigua, y podría aplicar a múltiples equipos médicos diferentes de los que se encuentran en el contexto (por ejemplo, si el usuario dice "necesito el manual", "cómo se enciende", "código de error", etc., sin especificar el modelo o equipo), NO intentes responder con información de todos los equipos a la vez ni adivinando a cuál se refiere. En su lugar, debes responder de manera breve y directa pidiendo aclaración sobre a cuál de los equipos se refiere (por ejemplo: "¿De qué equipo?", "¿Qué manual?", o "¿Qué ventilador?", adaptando la repregunta según los equipos que identifiques en el contexto).
                 """;
 
-        // 5. Construir el prompt de usuario conteniendo el contexto y la pregunta
-        String userPrompt = String.format(
-                "CONTEXT:\n%s\n\nUSER QUESTION: %s\n\nANSWER:",
-                contextBuilder.toString(),
-                question
-        );
+        // 7. Construir el prompt de usuario conteniendo el contexto y la pregunta (incluyendo la descripción de la imagen para contextualizar)
+        StringBuilder userPromptBuilder = new StringBuilder();
+        userPromptBuilder.append("CONTEXT:\n").append(contextBuilder.toString()).append("\n\n");
+        
+        if (imageDescription != null) {
+            userPromptBuilder.append("IMAGE INTERPRETATION/DESCRIPTION: ").append(imageDescription).append("\n\n");
+        }
+        
+        userPromptBuilder.append("USER QUESTION: ").append(question != null ? question : "Analiza la imagen provista y responde con las instrucciones del manual correspondiente.").append("\n\nANSWER:");
 
-        // 6. Solicitar la generación de la respuesta a Gemini
-        String answer = geminiService.generateAnswer(userPrompt, systemInstruction);
+        // 8. Solicitar la generación de la respuesta a Gemini (pasando también la imagen si está disponible para multimodalidad directa)
+        String answer = geminiService.generateAnswer(userPromptBuilder.toString(), imageBase64, imageMimeType, systemInstruction);
 
-        // 7. Compilar los fragmentos de metadatos de las fuentes para las citas del cliente
+        // 9. Compilar los fragmentos de metadatos de las fuentes para las citas del cliente
         List<SourceSnippet> sources = matchingChunks.stream()
                 .map(chunk -> new SourceSnippet(
                         chunk.getDocumentName(),

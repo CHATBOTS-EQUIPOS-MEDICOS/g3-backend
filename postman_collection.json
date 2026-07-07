@@ -232,6 +232,43 @@
           "response": []
         },
         {
+          "name": "Pregunta Pública con Imagen (Anónima)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "question",
+                  "value": "Detecta qué problema tiene este ventilador y cómo solucionarlo según su manual.",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/chat/ask",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "ask"
+              ]
+            },
+            "description": "Endpoint público para realizar consultas rápidas enviando un archivo de imagen en formato multipart/form-data junto con una pregunta opcional. Formatos de imagen permitidos: PNG, JPG, JPEG, WEBP."
+          },
+          "response": []
+        },
+        {
           "name": "Crear Sesión de Chat",
           "request": {
             "method": "POST",
@@ -338,6 +375,45 @@
               ]
             },
             "description": "Envía una pregunta en una sesión de chat específica. Guarda la pregunta, ejecuta la búsqueda semántica RAG, genera la respuesta y la guarda junto con las fuentes citadas. Si la sesión tenía por título 'Nueva Conversación', actualizará automáticamente el título al texto de esta primera pregunta (truncado a 40 caracteres)."
+          },
+          "response": []
+        },
+        {
+          "name": "Preguntar con Imagen en Sesión de Chat",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "question",
+                  "value": "Tengo esta luz de alarma encendida, ¿qué significa y cómo se soluciona?",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/chat/sessions/3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2/ask",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "sessions",
+                "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
+                "ask"
+              ]
+            },
+            "description": "Envía una pregunta con un archivo de imagen (multipart/form-data) dentro de una sesión de chat específica. Guarda la pregunta y el archivo, ejecuta el RAG a partir del análisis de la imagen, y almacena la respuesta generada con las fuentes."
           },
           "response": []
         },

@@ -96,6 +96,11 @@ public class ChatHistoryService {
      */
     @Transactional
     public ChatAnswer askInSession(UUID userId, UUID sessionId, String question) {
+        return askInSession(userId, sessionId, question, null, null);
+    }
+
+    @Transactional
+    public ChatAnswer askInSession(UUID userId, UUID sessionId, String question, String imageBase64, String imageMimeType) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
 
@@ -106,11 +111,13 @@ public class ChatHistoryService {
         ChatMessage userMessage = new ChatMessage();
         userMessage.setSession(session);
         userMessage.setRole("USER");
-        userMessage.setContent(question);
+        userMessage.setContent(question != null ? question : "[Imagen enviada]");
+        userMessage.setImageBase64(imageBase64);
+        userMessage.setImageMimeType(imageMimeType);
         messageRepository.save(userMessage);
 
         // 2. Obtener la respuesta del RAG ChatService
-        ChatAnswer chatAnswer = chatService.askQuestion(question);
+        ChatAnswer chatAnswer = chatService.askQuestion(question, imageBase64, imageMimeType);
 
         // Mapear los SourceSnippet de la respuesta a entidades ChatSource
         List<ChatSource> sources = chatAnswer.sources().stream()
@@ -129,9 +136,14 @@ public class ChatHistoryService {
         modelMessage.setSources(sources);
         messageRepository.save(modelMessage);
 
-        // 4. Si el título de la sesión es "Nueva Conversación", renombrarlo según la pregunta del usuario
+        // 4. Si el título de la sesión es "Nueva Conversación", renombrarlo según la pregunta o indicar consulta de imagen
         if ("Nueva Conversación".equals(session.getTitle())) {
-            String newTitle = question.length() > 40 ? question.substring(0, 37) + "..." : question;
+            String newTitle;
+            if (question != null && !question.trim().isEmpty()) {
+                newTitle = question.length() > 40 ? question.substring(0, 37) + "..." : question;
+            } else {
+                newTitle = "Consulta con Imagen";
+            }
             session.setTitle(newTitle);
         }
 

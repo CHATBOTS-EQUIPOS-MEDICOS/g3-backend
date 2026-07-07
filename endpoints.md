@@ -382,26 +382,25 @@ Elimina el registro de un manual del sistema, liberando también los recursos re
 
 ### 3.1 Consultar al Chatbot
 
-Realiza una consulta semántica al chatbot. Genera el embedding de la pregunta, busca en la base de datos local los fragmentos más similares usando similitud de coseno, inyecta dicho contexto como fuente y utiliza Gemini (`gemini-2.5-flash`) para responder fundamentado **únicamente** en los manuales cargados.
+Realiza una consulta al chatbot fundamentada en los manuales cargados. Soporta consultas de texto puro, imágenes puras o texto más imagen combinados. Genera embeddings semánticos a partir de la pregunta del usuario o de la interpretación visual de la imagen enviada, busca en la base de datos local los fragmentos de manuales más similares usando similitud de coseno, y utiliza Gemini (`gemini-2.5-flash`) para responder fundamentado **únicamente** en dichos fragmentos.
 
 - **URL:** `/api/chat/ask`
 - **Método HTTP:** `POST`
 - **Rol requerido:** Público / Permitido sin autenticación (disponible para clientes y público general)
-- **Content-Type:** `application/json`
+- **Content-Type:** `multipart/form-data`
 
-#### Cuerpo de la Petición (JSON)
+#### Cuerpo de la Petición (form-data)
 
-| Campo      | Tipo   | Requerido | Descripción                                                                              |
-| :--------- | :----- | :-------- | :--------------------------------------------------------------------------------------- |
-| `question` | String | Sí        | Consulta del usuario sobre funcionamiento, errores o calibración de los equipos médicos. |
+| Campo      | Tipo       | Requerido | Descripción                                                                              |
+| :--------- | :--------- | :-------- | :--------------------------------------------------------------------------------------- |
+| `question` | String     | No\*      | Consulta del usuario sobre funcionamiento, errores o calibración de los equipos médicos. |
+| `file`     | File (Img) | No\*      | Archivo de imagen de la máquina/problema (Formatos permitidos: PNG, JPG, JPEG, WEBP).    |
 
-##### Ejemplo de Cuerpo de Petición
+> \* Nota: Al menos uno de los dos campos (`question` o `file`) debe estar presente en la petición.
 
-```json
-{
-  "question": "¿Cuál es la presión máxima permitida en el circuito del respirador?"
-}
-```
+##### Ejemplo de Petición (Postman Form-data)
+* `question` (Text): "¿Qué significa esta luz roja en la pantalla?"
+* `file` (File): `alarma_ventilador.png` (Archivo seleccionado desde disco)
 
 #### Respuestas
 
@@ -409,7 +408,7 @@ Realiza una consulta semántica al chatbot. Genera el embedding de la pregunta, 
 
   ```json
   {
-    "answer": "La presión máxima permitida en el circuito del respirador es de 60 cmH2O. Si se supera este valor, se activará la alarma de alta presión.",
+    "answer": "La luz roja parpadeante indica una alarma de alta presión en el circuito del respirador, la cual no debe exceder los 60 cmH2O...",
     "sources": [
       {
         "documentName": "manual_respirador_model_x.pdf",
@@ -420,15 +419,21 @@ Realiza una consulta semántica al chatbot. Genera el embedding de la pregunta, 
   }
   ```
 
-- **`400 Bad Request` (Pregunta Vacía):**
+- **`400 Bad Request` (Parámetros Vacíos o Formato de Imagen Inválido):**
+  - Si faltan ambos parámetros:
+    ```json
+    {
+      "error": "The question or image file must be provided."
+    }
+    ```
+  - Si el formato de imagen no es válido:
+    ```json
+    {
+      "error": "Formato de imagen no permitido. Solo se permiten PNG, JPG, JPEG y WEBP."
+    }
+    ```
 
-  ```json
-  {
-    "error": "The question field must not be empty."
-  }
-  ```
-
-- **`500 Internal Server Error` (Fallo en el Servicio/API de Gemini):**
+- **`500 Internal Server Error` (Fallo en el Servicio/API de Gemini o lectura de archivo):**
   ```json
   {
     "error": "Failed to answer the question: <detalle_del_error>"
@@ -503,7 +508,7 @@ Obtiene la lista de todas las sesiones de chat iniciadas por el usuario autentic
 
 ### 4.3 Listar Mensajes de una Sesión
 
-Obtiene el historial completo de mensajes y respuestas de una conversación específica. El sistema valida que la conversación pertenezca al usuario autenticado.
+Obtiene el historial completo de mensajes y respuestas de una conversación específica. El sistema valida que la conversación pertenezca al usuario autenticado. Si el usuario envió imágenes en sus consultas, la respuesta del backend incluirá los datos de la imagen codificada en Base64.
 
 - **URL:** `/api/chat/sessions/{sessionId}/messages`
 - **Método HTTP:** `GET`
@@ -524,21 +529,34 @@ Obtiene el historial completo de mensajes y respuestas de una conversación espe
       "id": "bfa4429e-cd56-42d4-a0fb-4050b13cf0ea",
       "role": "USER",
       "content": "¿Cómo se calibra la pantalla del monitor multiparamétrico?",
+      "imageBase64": null,
+      "imageMimeType": null,
       "sources": null,
       "createdAt": "2026-07-06T10:05:20"
     },
     {
+      "id": "c1f77d3b-ae29-4b21-a185-32e65c589b21",
+      "role": "USER",
+      "content": "[Imagen enviada]",
+      "imageBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk...",
+      "imageMimeType": "image/png",
+      "sources": null,
+      "createdAt": "2026-07-06T10:06:10"
+    },
+    {
       "id": "d1a63cde-f1b2-4d2c-8ab5-f12b2a75908e",
       "role": "MODEL",
-      "content": "Para calibrar la pantalla, ingrese al menú de servicio manteniendo presionado el botón 'Menú' durante 3 segundos...",
+      "content": "La luz de alarma roja del monitor indica un fallo de alimentación...",
+      "imageBase64": null,
+      "imageMimeType": null,
       "sources": [
         {
           "documentName": "monitor_multiparametrico.pdf",
           "chunkIndex": 3,
-          "snippet": "Para calibrar la pantalla, acceda al menú de servicio técnico..."
+          "snippet": "En caso de fallo de alimentación, el LED rojo parpadeará alternamente..."
         }
       ],
-      "createdAt": "2026-07-06T10:05:25"
+      "createdAt": "2026-07-06T10:06:15"
     }
   ]
   ```
@@ -547,14 +565,14 @@ Obtiene el historial completo de mensajes y respuestas de una conversación espe
 
 ### 4.4 Preguntar en una Sesión de Chat
 
-Envía una pregunta dentro de una sesión de chat existente. Guarda la pregunta y la respuesta del chatbot (con sus fuentes y fragmentos citados) en la base de datos asociada a la sesión.
+Envía una pregunta dentro de una sesión de chat existente, permitiendo opcionalmente adjuntar una imagen. Guarda la pregunta, la imagen (si se provee) y la respuesta del chatbot (con sus fuentes y fragmentos citados) en la base de datos asociada a la sesión.
 
-Si el título actual de la sesión es "Nueva Conversación", el sistema actualizará automáticamente el título al texto de esta primera pregunta (truncado a 40 caracteres).
+Si el título actual de la sesión es "Nueva Conversación", el sistema actualizará automáticamente el título a la pregunta del usuario (truncado a 40 caracteres) o a "Consulta con Imagen" si sólo envió un archivo.
 
 - **URL:** `/api/chat/sessions/{sessionId}/ask`
 - **Método HTTP:** `POST`
 - **Rol requerido:** Usuario autenticado
-- **Content-Type:** `application/json`
+- **Content-Type:** `multipart/form-data`
 
 #### Parámetros
 
@@ -562,41 +580,48 @@ Si el título actual de la sesión es "Nueva Conversación", el sistema actualiz
 | :---------- | :-------- | :--- | :-------- | :-------------------------------------- |
 | `sessionId` | Path      | UUID | Sí        | Identificador único de la conversación. |
 
-#### Cuerpo de la Petición (JSON)
+#### Cuerpo de la Petición (form-data)
 
-| Campo      | Tipo   | Requerido | Descripción                         |
-| :--------- | :----- | :-------- | :---------------------------------- |
-| `question` | String | Sí        | Pregunta del usuario sobre el chat. |
+| Campo      | Tipo       | Requerido | Descripción                                                                              |
+| :--------- | :--------- | :-------- | :--------------------------------------------------------------------------------------- |
+| `question` | String     | No\*      | Pregunta del usuario sobre el chat.                                                      |
+| `file`     | File (Img) | No\*      | Archivo de imagen de la máquina/problema (Formatos permitidos: PNG, JPG, JPEG, WEBP).    |
 
-##### Ejemplo de Cuerpo de Petición
-```json
-{
-  "question": "¿Cómo se calibra la pantalla del monitor multiparamétrico?"
-}
-```
+> \* Nota: Al menos uno de los dos campos (`question` o `file`) debe estar presente en la petición.
+
+##### Ejemplo de Petición (Postman Form-data)
+* `question` (Text): "¿Cómo se soluciona este código de error?"
+* `file` (File): `codigo_error_monitor.jpg` (Archivo seleccionado desde disco)
 
 #### Respuestas
 
 - **`200 OK` (Respuesta Generada y Guardada):**
   ```json
   {
-    "answer": "Para calibrar la pantalla, ingrese al menú de servicio manteniendo presionado el botón 'Menú' durante 3 segundos...",
+    "answer": "El código de error en la pantalla indica una batería baja. Deberá conectar el monitor multiparamétrico a la red eléctrica...",
     "sources": [
       {
         "documentName": "monitor_multiparametrico.pdf",
         "chunkIndex": 3,
-        "snippet": "Para calibrar la pantalla, acceda al menú de servicio técnico..."
+        "snippet": "Cuando la batería interna está críticamente baja, se mostrará el error en pantalla..."
       }
     ]
   }
   ```
 
-- **`400 Bad Request` (Pregunta Vacía):**
-  ```json
-  {
-    "error": "The question field must not be empty."
-  }
-  ```
+- **`400 Bad Request` (Pregunta o Archivo Vacíos / Imagen Inválida):**
+  - Si faltan ambos parámetros:
+    ```json
+    {
+      "error": "The question or image file must be provided."
+    }
+    ```
+  - Si el formato de imagen no es válido:
+    ```json
+    {
+      "error": "Formato de imagen no permitido. Solo se permiten PNG, JPG, JPEG y WEBP."
+    }
+    ```
 
 ---
 

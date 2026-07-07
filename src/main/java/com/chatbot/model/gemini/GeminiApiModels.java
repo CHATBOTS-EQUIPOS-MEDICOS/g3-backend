@@ -69,8 +69,21 @@ public final class GeminiApiModels {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Blob(
+        String mimeType,
+        String data
+    ) {}
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Part(
-        String text
-    ) {}
+        String text,
+        Blob inlineData
+    ) {
+        public Part(String text) {
+            this(text, null);
+        }
+    }
 }
