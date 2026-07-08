@@ -259,6 +259,210 @@ Desactiva la cuenta del usuario autenticado (baja lógica). Cambia su estado a i
 
 ---
 
+### 1.7 [ADMIN] Listar Todos los Usuarios
+
+Permite al administrador obtener la lista detallada de todos los usuarios registrados en el sistema, ordenados por fecha de creación de manera descendente (los más recientes primero).
+
+- **URL:** `/api/admin/users`
+- **Método HTTP:** `GET`
+- **Rol requerido:** `ADMIN`
+
+#### Respuestas
+
+- **`200 OK` (Consulta Exitosa):**
+  ```json
+  [
+    {
+      "id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      "fullName": "Juan Pérez",
+      "email": "juan.perez@example.com",
+      "role": "CLIENT",
+      "active": true,
+      "fechaBaja": null,
+      "createdAt": "2026-07-08T10:00:00.000",
+      "updatedAt": "2026-07-08T10:00:00.000"
+    },
+    {
+      "id": "9c0d1e2f-3a4b-5c6d-a1b2-c3d4e5f67a8b",
+      "fullName": "Administrator",
+      "email": "admin@example.com",
+      "role": "ADMIN",
+      "active": true,
+      "fechaBaja": null,
+      "createdAt": "2026-07-01T08:00:00.000",
+      "updatedAt": "2026-07-01T08:00:00.000"
+    }
+  ]
+  ```
+
+- **`403 Forbidden` (Rol insuficiente):**
+  Retorna error si el usuario no posee el rol `ADMIN`.
+
+---
+
+### 1.8 [ADMIN] Crear Usuario
+
+Permite al administrador registrar un nuevo usuario con cualquier rol en el sistema.
+
+- **URL:** `/api/admin/users`
+- **Método HTTP:** `POST`
+- **Rol requerido:** `ADMIN`
+- **Content-Type:** `application/json`
+
+#### Cuerpo de la Petición (JSON)
+
+| Campo | Tipo | Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `fullName` | String | Sí | Nombre completo (entre 3 y 100 caracteres). |
+| `email` | String | Sí | Correo electrónico único con formato válido (requiere `@` y `.`). |
+| `password` | String | Sí | Contraseña (entre 6 y 50 caracteres). |
+| `role` | String | Sí | Rol del usuario (`ADMIN` o `CLIENT`). |
+
+##### Ejemplo de Cuerpo de Petición
+```json
+{
+  "fullName": "Soporte Técnico",
+  "email": "soporte@example.com",
+  "password": "securePassword123",
+  "role": "CLIENT"
+}
+```
+
+#### Respuestas
+
+- **`200 OK` (Creación Exitosa):**
+  ```json
+  {
+    "id": "e837f694-df7a-4c28-97e0-911a7a0de3d4",
+    "fullName": "Soporte Técnico",
+    "email": "soporte@example.com",
+    "role": "CLIENT",
+    "active": true,
+    "fechaBaja": null,
+    "createdAt": "2026-07-08T10:15:00.000",
+    "updatedAt": "2026-07-08T10:15:00.000"
+  }
+  ```
+
+- **`400 Bad Request` (Error de Validación o Correo Duplicado):**
+  ```json
+  {
+    "error": "El correo ya está registrado."
+  }
+  ```
+
+---
+
+### 1.9 [ADMIN] Editar Usuario
+
+Permite al administrador actualizar la información de cualquier usuario registrado en el sistema de manera parcial.
+
+- **URL:** `/api/admin/users/{id}`
+- **Método HTTP:** `PUT`
+- **Rol requerido:** `ADMIN`
+- **Content-Type:** `application/json`
+
+#### Cuerpo de la Petición (JSON)
+Todos los campos son opcionales.
+
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `fullName` | String | Nombre completo (entre 3 y 100 caracteres). |
+| `email` | String | Correo electrónico con formato válido (requiere `@` y `.`). |
+| `password` | String | Nueva contraseña (entre 6 y 50 caracteres, debe incluir al menos un número, una mayúscula y una minúscula). |
+| `role` | String | Rol del usuario (`ADMIN` o `CLIENT`). |
+| `active` | Boolean | Estado de la cuenta. |
+
+> [!WARNING]
+> **Autoprotección:** Un administrador no puede degradar su propio rol (de `ADMIN` a `CLIENT`) ni desactivar su propia cuenta.
+
+#### Respuestas
+
+- **`200 OK` (Actualización Exitosa):**
+  ```json
+  {
+    "id": "e837f694-df7a-4c28-97e0-911a7a0de3d4",
+    "fullName": "Soporte Técnico Actualizado",
+    "email": "soporte.nuevo@example.com",
+    "role": "ADMIN",
+    "active": true,
+    "fechaBaja": null,
+    "createdAt": "2026-07-08T10:15:00.000",
+    "updatedAt": "2026-07-08T10:20:00.000"
+  }
+  ```
+
+- **`400 Bad Request` (Errores de validación o auto-degradación):**
+  ```json
+  {
+    "error": "No puedes cambiar tu propio rol de administrador."
+  }
+  ```
+
+---
+
+### 1.10 [ADMIN] Desactivar Usuario (Baja Lógica)
+
+Permite al administrador realizar la baja lógica de un usuario. Esto cambia su estado `active` a `false`, registra la `fechaBaja` y modifica el correo añadiendo `"disabled"` (ejemplo: `soporte@exampledisabled.com`) para liberar el correo original.
+
+- **URL:** `/api/admin/users/{id}`
+- **Método HTTP:** `DELETE`
+- **Rol requerido:** `ADMIN`
+
+> [!WARNING]
+> Un administrador no puede desactivar su propia cuenta.
+
+#### Respuestas
+
+- **`200 OK` (Desactivación Exitosa):**
+  ```json
+  {
+    "message": "Usuario desactivado exitosamente."
+  }
+  ```
+
+- **`400 Bad Request` (Auto-desactivación o usuario no encontrado):**
+  ```json
+  {
+    "error": "No puedes desactivar tu propia cuenta de administrador."
+  }
+  ```
+
+---
+
+### 1.11 [ADMIN] Activar Usuario (Alta Lógica)
+
+Permite al administrador reactivar un usuario anteriormente desactivado. Cambia su estado `active` a `true`, limpia `fechaBaja` a `null`, y restaura el correo electrónico original (eliminando el sufijo `"disabled"`) si el correo no está siendo usado por otra cuenta activa.
+
+- **URL:** `/api/admin/users/{id}/activate`
+- **Método HTTP:** `POST`
+- **Rol requerido:** `ADMIN`
+
+#### Respuestas
+
+- **`200 OK` (Reactivación Exitosa):**
+  ```json
+  {
+    "id": "e837f694-df7a-4c28-97e0-911a7a0de3d4",
+    "fullName": "Soporte Técnico Actualizado",
+    "email": "soporte@example.com",
+    "role": "ADMIN",
+    "active": true,
+    "fechaBaja": null,
+    "createdAt": "2026-07-08T10:15:00.000",
+    "updatedAt": "2026-07-08T10:30:00.000"
+  }
+  ```
+
+- **`400 Bad Request` (Usuario ya activo o correo original duplicado):**
+  ```json
+  {
+    "error": "El usuario ya se encuentra activo."
+  }
+  ```
+
+---
+
 ## 2. Gestión de Documentos
 
 Todos los endpoints de documentos tienen el prefijo `/api/documents`.
