@@ -37,7 +37,7 @@ public class User {
 	private Role id_rol;
 	   
 	@Column()
-	private Boolean active;
+	private Boolean active = true;
 	    
 	@Column(name = "fecha_baja") 
 	private LocalDateTime fechaBaja; 
