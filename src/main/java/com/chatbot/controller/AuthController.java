@@ -43,7 +43,7 @@ public class AuthController {
         tokenCookie.setHttpOnly(true);
         tokenCookie.setSecure(false); // false para soportar pruebas locales en http://localhost
         tokenCookie.setPath("/");
-        tokenCookie.setMaxAge(86400); // 24 hours
+        tokenCookie.setMaxAge(86400); // 24 horas
         response.addCookie(tokenCookie);
 
         AuthResponse authResponse = new AuthResponse(
@@ -63,7 +63,7 @@ public class AuthController {
         tokenCookie.setHttpOnly(true);
         tokenCookie.setSecure(false);
         tokenCookie.setPath("/");
-        tokenCookie.setMaxAge(0); // Delete
+        tokenCookie.setMaxAge(0); // Eliminar
         response.addCookie(tokenCookie);
 
         AuthResponse authResponse = new AuthResponse(

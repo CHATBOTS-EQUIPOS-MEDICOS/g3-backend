@@ -42,7 +42,7 @@ public class GeminiService {
     }
 
     /**
-     * Generates a dense embedding vector (usually 768 dimensions) for the input text.
+     * Genera un vector de embedding denso (usualmente de 768 dimensiones) para el texto de entrada.
      */
     public List<Double> getEmbedding(String text) {
         String url = String.format(
@@ -85,14 +85,14 @@ public class GeminiService {
     }
 
     /**
-     * Generates text content using Gemini based on a user prompt and optional system instructions.
+     * Genera contenido de texto usando Gemini basado en un prompt de usuario e instrucciones del sistema opcionales.
      */
     public String generateAnswer(String prompt, String systemText) {
         return generateAnswer(prompt, null, null, systemText);
     }
 
     /**
-     * Generates text content using Gemini based on a user prompt, optional image data, and optional system instructions.
+     * Genera contenido de texto usando Gemini basado en un prompt de usuario, datos de imagen opcionales e instrucciones del sistema opcionales.
      */
     public String generateAnswer(String prompt, String imageBase64, String imageMimeType, String systemText) {
         Content userContent;
@@ -108,7 +108,7 @@ public class GeminiService {
     }
 
     /**
-     * Generates text content using Gemini based on a list of previous chat contents, and optional system instructions.
+     * Genera contenido de texto usando Gemini basado en una lista de contenidos de chat previos e instrucciones del sistema opcionales.
      */
     public String generateAnswer(List<Content> contents, String systemText) {
         String url = String.format(
