@@ -107,6 +107,10 @@ public class ChatHistoryService {
         ChatSession session = sessionRepository.findByIdAndUser(sessionId, user)
                 .orElseThrow(() -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
 
+        // A. Obtener el historial de los últimos 5 mensajes previos de la sesión
+        List<ChatMessage> previousMessages = messageRepository.findTop5BySessionOrderByCreatedAtDesc(session);
+        java.util.Collections.reverse(previousMessages);
+
         // 1. Guardar el mensaje del usuario
         ChatMessage userMessage = new ChatMessage();
         userMessage.setSession(session);
@@ -117,7 +121,7 @@ public class ChatHistoryService {
         messageRepository.save(userMessage);
 
         // 2. Obtener la respuesta del RAG ChatService
-        ChatAnswer chatAnswer = chatService.askQuestion(question, imageBase64, imageMimeType);
+        ChatAnswer chatAnswer = chatService.askQuestion(question, imageBase64, imageMimeType, previousMessages);
 
         // Mapear los SourceSnippet de la respuesta a entidades ChatSource
         List<ChatSource> sources = chatAnswer.sources().stream()

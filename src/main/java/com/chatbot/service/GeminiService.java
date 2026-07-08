@@ -95,11 +95,6 @@ public class GeminiService {
      * Generates text content using Gemini based on a user prompt, optional image data, and optional system instructions.
      */
     public String generateAnswer(String prompt, String imageBase64, String imageMimeType, String systemText) {
-        String url = String.format(
-                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                chatModel, apiKey
-        );
-
         Content userContent;
         if (imageBase64 != null && imageMimeType != null) {
             Blob blob = new Blob(imageMimeType, imageBase64);
@@ -109,13 +104,24 @@ public class GeminiService {
         } else {
             userContent = Content.user(prompt);
         }
+        return generateAnswer(List.of(userContent), systemText);
+    }
+
+    /**
+     * Generates text content using Gemini based on a list of previous chat contents, and optional system instructions.
+     */
+    public String generateAnswer(List<Content> contents, String systemText) {
+        String url = String.format(
+                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
+                chatModel, apiKey
+        );
 
         SystemInstruction systemInstruction = systemText != null ? 
                 new SystemInstruction(List.of(new Part(systemText, null))) : null;
         GenerationConfig config = new GenerationConfig(0.2, "text/plain");
 
         ChatRequest requestBody = new ChatRequest(
-                List.of(userContent),
+                contents,
                 systemInstruction,
                 config
         );
