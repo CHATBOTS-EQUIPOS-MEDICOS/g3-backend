@@ -1,6 +1,10 @@
 package com.chatbot.service;
 
+import com.chatbot.model.ChatMessage;
 import com.chatbot.model.DocumentChunk;
+import com.chatbot.model.gemini.GeminiApiModels.Content;
+import com.chatbot.model.gemini.GeminiApiModels.Blob;
+import com.chatbot.model.gemini.GeminiApiModels.Part;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -43,7 +47,11 @@ public class ChatService {
     }
 
     public ChatAnswer askQuestion(String question, String imageBase64, String imageMimeType) {
-        log.info("Answering user query: '{}', with image: {}", question, (imageBase64 != null));
+        return askQuestion(question, imageBase64, imageMimeType, List.of());
+    }
+
+    public ChatAnswer askQuestion(String question, String imageBase64, String imageMimeType, List<ChatMessage> history) {
+        log.info("Answering user query: '{}', with image: {}, history size: {}", question, (imageBase64 != null), (history != null ? history.size() : 0));
 
         // Validar formato de imagen si se proporciona
         if (imageBase64 != null && imageMimeType != null) {
@@ -128,10 +136,41 @@ public class ChatService {
         
         userPromptBuilder.append("USER QUESTION: ").append(question != null ? question : "Analiza la imagen provista y responde con las instrucciones del manual correspondiente.").append("\n\nANSWER:");
 
-        // 8. Solicitar la generación de la respuesta a Gemini (pasando también la imagen si está disponible para multimodalidad directa)
-        String answer = geminiService.generateAnswer(userPromptBuilder.toString(), imageBase64, imageMimeType, systemInstruction);
+        // 8. Construir la lista de Content de Gemini (historial + mensaje actual)
+        List<Content> contentsList = new java.util.ArrayList<>();
+        if (history != null && !history.isEmpty()) {
+            for (ChatMessage msg : history) {
+                if ("USER".equals(msg.getRole())) {
+                    if (msg.getImageBase64() != null && msg.getImageMimeType() != null) {
+                        Blob blob = new Blob(msg.getImageMimeType(), msg.getImageBase64());
+                        Part imagePart = new Part(null, blob);
+                        Part textPart = new Part(msg.getContent(), null);
+                        contentsList.add(new Content(List.of(textPart, imagePart), "user"));
+                    } else {
+                        contentsList.add(Content.user(msg.getContent()));
+                    }
+                } else if ("MODEL".equals(msg.getRole())) {
+                    contentsList.add(Content.model(msg.getContent()));
+                }
+            }
+        }
 
-        // 9. Compilar los fragmentos de metadatos de las fuentes para las citas del cliente
+        // Añadir el mensaje de usuario actual (con RAG context y la imagen opcional en la llamada)
+        Content currentUserContent;
+        if (imageBase64 != null && imageMimeType != null) {
+            Blob blob = new Blob(imageMimeType, imageBase64);
+            Part imagePart = new Part(null, blob);
+            Part textPart = new Part(userPromptBuilder.toString(), null);
+            currentUserContent = new Content(List.of(textPart, imagePart), "user");
+        } else {
+            currentUserContent = Content.user(userPromptBuilder.toString());
+        }
+        contentsList.add(currentUserContent);
+
+        // 9. Solicitar la generación de la respuesta a Gemini
+        String answer = geminiService.generateAnswer(contentsList, systemInstruction);
+
+        // 10. Compilar los fragmentos de metadatos de las fuentes para las citas del cliente
         List<SourceSnippet> sources = matchingChunks.stream()
                 .map(chunk -> new SourceSnippet(
                         chunk.getDocumentName(),

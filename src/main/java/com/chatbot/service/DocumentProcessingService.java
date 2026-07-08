@@ -18,8 +18,8 @@ public class DocumentProcessingService {
     private final VectorStoreService vectorStoreService;
 
     // Configuración de los fragmentos (chunks) objetivo
-    private static final int CHUNK_SIZE = 1000; // characters
-    private static final int OVERLAP = 200;     // characters
+    private static final int CHUNK_SIZE = 1000; // caracteres
+    private static final int OVERLAP = 200;     // caracteres
 
     public DocumentProcessingService(GeminiService geminiService, VectorStoreService vectorStoreService) {
         this.geminiService = geminiService;
