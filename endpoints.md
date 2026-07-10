@@ -856,26 +856,35 @@ Esta sección describe la API REST y la especificación de comunicación en tiem
 
 ### 5.1 Solicitar Soporte Técnico (Cliente)
 
-Crea una sesión de chat de soporte en vivo y la asigna directamente al administrador por defecto del sistema. La sesión se inicia en estado `ACTIVE`.
+Crea una sesión de chat de soporte en vivo. Solo los usuarios con rol **`CLIENT`** pueden solicitar soporte técnico. La sesión se inicia en estado **`WAITING`** sin ningún técnico asignado (`support` = `null`). 
+
+Adicionalmente, esta acción notifica inmediatamente a todos los administradores conectados a través de la alerta de WebSocket `NEW_SUPPORT_REQUEST`.
 
 - **URL:** `/api/support/request`
 - **Método HTTP:** `POST`
-- **Rol requerido:** Usuario autenticado
+- **Rol requerido:** `CLIENT`
 
 #### Respuestas
 
-- **`200 OK` (Sesión Creada y Asignada):**
+- **`200 OK` (Sesión Creada en Espera):**
   ```json
   {
     "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
     "userId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
     "clientName": "Juan Pérez",
-    "supportId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-    "supportName": "Administrator",
-    "status": "ACTIVE",
+    "supportId": null,
+    "supportName": null,
+    "status": "WAITING",
     "createdAt": "2026-07-07T11:32:00",
-    "assignedAt": "2026-07-07T11:32:00",
+    "assignedAt": null,
     "closedAt": null
+  }
+  ```
+
+- **`403 Forbidden` (Acceso denegado a administradores/roles incorrectos):**
+  ```json
+  {
+    "error": "Su rol en el sistema (ADMIN) no puede solicitar soporte técnico."
   }
   ```
 
@@ -883,11 +892,11 @@ Crea una sesión de chat de soporte en vivo y la asigna directamente al administ
 
 ### 5.2 Obtener Sesión de Soporte Activa (Cliente)
 
-Obtiene la sesión de soporte activa o en espera del cliente autenticado.
+Obtiene la sesión de soporte activa o en espera (`WAITING`, `ACTIVE`, `PENDING_USER`) del cliente autenticado.
 
 - **URL:** `/api/support/sessions/active`
 - **Método HTTP:** `GET`
-- **Rol requerido:** Usuario autenticado
+- **Rol requerido:** `CLIENT` (o cualquier usuario autenticado)
 
 #### Respuestas
 
@@ -901,7 +910,7 @@ Obtiene la sesión de soporte activa o en espera del cliente autenticado.
     "supportName": "Administrator",
     "status": "ACTIVE",
     "createdAt": "2026-07-07T11:32:00",
-    "assignedAt": "2026-07-07T11:32:00",
+    "assignedAt": "2026-07-07T11:32:15",
     "closedAt": null
   }
   ```
@@ -917,7 +926,7 @@ Obtiene el historial completo de mensajes en orden cronológico de una conversac
 
 - **URL:** `/api/support/sessions/{sessionId}/messages`
 - **Método HTTP:** `GET`
-- **Rol requerido:** Usuario autenticado
+- **Rol requerido:** Usuario autenticado (propietario o `ADMIN`)
 
 #### Respuestas
 
@@ -945,17 +954,44 @@ Obtiene el historial completo de mensajes en orden cronológico de una conversac
 
 ---
 
-### 5.4 Finalizar Sesión de Soporte
+### 5.4 Aceptar Sesión de Soporte (Admin)
 
-Cierra y marca una sesión de soporte como resuelta. Bloquea el envío de más mensajes.
+Permite a un administrador aceptar una sesión de soporte que se encuentra en espera (`WAITING`). Modifica el estado de la sesión a `ACTIVE`, asigna el administrador logueado a la sesión, y notifica al cliente que la sesión ahora está activa.
 
-- **URL:** `/api/support/sessions/{sessionId}/close`
+- **URL:** `/api/support/sessions/{sessionId}/accept`
 - **Método HTTP:** `POST`
-- **Rol requerido:** Usuario autenticado
+- **Rol requerido:** `ADMIN`
 
 #### Respuestas
 
-- **`200 OK`:**
+- **`200 OK` (Sesión Aceptada con Éxito):**
+  ```json
+  {
+    "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+    "userId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
+    "clientName": "Juan Pérez",
+    "supportId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+    "supportName": "Administrator",
+    "status": "ACTIVE",
+    "createdAt": "2026-07-07T11:32:00",
+    "assignedAt": "2026-07-07T11:32:30",
+    "closedAt": null
+  }
+  ```
+
+---
+
+### 5.5 Finalizar Sesión de Soporte
+
+Cierra y marca una sesión de soporte como resuelta. Esta acción envía automáticamente al cliente una notificación en tiempo real de tipo `SYSTEM_MESSAGE` indicando que el chat ha sido finalizado, seguido de la alerta de cierre `SESSION_CLOSED`. Bloquea el envío de más mensajes.
+
+- **URL:** `/api/support/sessions/{sessionId}/close`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Usuario autenticado (`CLIENT` o `ADMIN`)
+
+#### Respuestas
+
+- **`200 OK` (Sesión Cerrada con Éxito):**
   ```json
   {
     "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
@@ -965,16 +1001,45 @@ Cierra y marca una sesión de soporte como resuelta. Bloquea el envío de más m
     "supportName": "Administrator",
     "status": "RESOLVED",
     "createdAt": "2026-07-07T11:32:00",
-    "assignedAt": "2026-07-07T11:32:00",
+    "assignedAt": "2026-07-07T11:32:30",
     "closedAt": "2026-07-07T11:35:10"
   }
   ```
 
 ---
 
-### 5.5 Obtener Chats Activos del Administrador (Admin)
+### 5.6 Listar Sesiones en Espera (Admin)
 
-Obtiene una lista de todas las sesiones de soporte activas que están asignadas al administrador logueado en ese momento.
+Obtiene la lista de todas las sesiones de soporte que se encuentran actualmente esperando asignación (estado `WAITING`).
+
+- **URL:** `/api/support/sessions/waiting`
+- **Método HTTP:** `GET`
+- **Rol requerido:** `ADMIN`
+
+#### Respuestas
+
+- **`200 OK`:**
+  ```json
+  [
+    {
+      "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
+      "userId": "d74e0d7c-86e5-42cf-9d41-b0e6e713600f",
+      "clientName": "Juan Pérez",
+      "supportId": null,
+      "supportName": null,
+      "status": "WAITING",
+      "createdAt": "2026-07-07T11:32:00",
+      "assignedAt": null,
+      "closedAt": null
+    }
+  ]
+  ```
+
+---
+
+### 5.7 Obtener Chats Activos del Administrador (Admin)
+
+Obtiene una lista de todas las sesiones de soporte activas (`ACTIVE`) que están asignadas al administrador logueado.
 
 - **URL:** `/api/support/sessions/admin/active`
 - **Método HTTP:** `GET`
@@ -993,7 +1058,7 @@ Obtiene una lista de todas las sesiones de soporte activas que están asignadas 
       "supportName": "Administrator",
       "status": "ACTIVE",
       "createdAt": "2026-07-07T11:32:00",
-      "assignedAt": "2026-07-07T11:32:00",
+      "assignedAt": "2026-07-07T11:32:30",
       "closedAt": null
     }
   ]
@@ -1001,7 +1066,7 @@ Obtiene una lista de todas las sesiones de soporte activas que están asignadas 
 
 ---
 
-### 5.6 Obtener Historial de Chats Cerrados del Administrador (Admin)
+### 5.8 Obtener Historial de Chats Cerrados del Administrador (Admin)
 
 Obtiene una lista de todas las sesiones de soporte finalizadas/cerradas (estados `RESOLVED` y `EXPIRED`) que estuvieron asignadas al administrador logueado.
 
@@ -1022,7 +1087,7 @@ Obtiene una lista de todas las sesiones de soporte finalizadas/cerradas (estados
       "supportName": "Administrator",
       "status": "RESOLVED",
       "createdAt": "2026-07-07T11:32:00",
-      "assignedAt": "2026-07-07T11:32:00",
+      "assignedAt": "2026-07-07T11:32:30",
       "closedAt": "2026-07-07T11:35:10"
     }
   ]
@@ -1030,16 +1095,16 @@ Obtiene una lista de todas las sesiones de soporte finalizadas/cerradas (estados
 
 ---
 
-### 5.7 Conectar al Chat de Soporte vía WebSocket
+### 5.9 Conectar al Chat de Soporte vía WebSocket
 
 Establece una conexión en tiempo real bidireccional para chatear.
 
 - **URL de Conexión:** `ws://localhost:8080/ws/support`
 - **Autenticación (Handshake):** Requiere un token JWT válido. Puede enviarse como cookie `token` o como parámetro de consulta de URL `?token=TU_JWT_TOKEN`.
 
-#### Protocolo de Mensajería JSON
+#### Protocolo de Mensajería JSON (Eventos y Respuestas)
 
-##### 5.6.6.1 Enviar Mensaje (Cliente)
+##### 5.9.1 Enviar Mensaje (Cliente)
 Envía un mensaje a la sesión activa del cliente.
 ```json
 {
@@ -1048,7 +1113,7 @@ Envía un mensaje a la sesión activa del cliente.
 }
 ```
 
-##### 5.6.6.2 Enviar Mensaje (Administrador)
+##### 5.9.2 Enviar Mensaje (Administrador)
 Envía un mensaje a un cliente específico indicando el `sessionId`.
 ```json
 {
@@ -1058,7 +1123,7 @@ Envía un mensaje a un cliente específico indicando el `sessionId`.
 }
 ```
 
-##### 5.6.6.3 Mensaje Recibido (Ambas Partes)
+##### 5.9.3 Mensaje Recibido (Ambas Partes)
 El servidor reenvía el mensaje en tiempo real con este formato:
 ```json
 {
@@ -1072,7 +1137,7 @@ El servidor reenvía el mensaje en tiempo real con este formato:
 }
 ```
 
-##### 5.6.6.4 Notificación de Cierre de Sesión
+##### 5.9.4 Notificación de Cierre de Sesión (`SESSION_CLOSED`)
 El servidor avisa que el chat fue cerrado por la otra parte o API REST.
 ```json
 {
@@ -1081,7 +1146,39 @@ El servidor avisa que el chat fue cerrado por la otra parte o API REST.
 }
 ```
 
-##### 5.6.6.5 Mensaje de Error
+##### 5.9.5 Respuestas Automáticas del Sistema (`SYSTEM_MESSAGE`)
+Mensajes generados de forma automática por el backend para notificar eventos clave al cliente:
+* **Si el cliente escribe en estado de espera (`WAITING`):**
+  ```json
+  {
+    "type": "SYSTEM_MESSAGE",
+    "sessionId": "UUID_DE_LA_SESION",
+    "content": "Por favor, espera unos segundos a que un técnico acepte tu solicitud.",
+    "createdAt": "2026-07-07T11:33:15"
+  }
+  ```
+* **Si el técnico cierra la sesión de soporte:**
+  ```json
+  {
+    "type": "SYSTEM_MESSAGE",
+    "sessionId": "UUID_DE_LA_SESION",
+    "content": "Su sesión de soporte ha sido finalizada.",
+    "createdAt": "2026-07-07T11:35:10"
+  }
+  ```
+
+##### 5.9.6 Notificación a Administradores (`NEW_SUPPORT_REQUEST`)
+El servidor avisa a todos los administradores en tiempo real que un cliente acaba de solicitar soporte técnico y se encuentra esperando un técnico asignado.
+```json
+{
+  "type": "NEW_SUPPORT_REQUEST",
+  "sessionId": "UUID_DE_LA_SESION",
+  "clientName": "Nombre del Cliente",
+  "createdAt": "2026-07-07T11:32:00"
+}
+```
+
+##### 5.9.7 Mensaje de Error
 El servidor responde con este formato en caso de infracciones (como chatear sin una sesión activa o sobre una sesión cerrada).
 ```json
 {

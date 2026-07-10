@@ -69,6 +69,38 @@ Cuando un usuario sube un archivo PDF al backend, se activa el siguiente flujo d
 
 ---
 
+## 💬 Soporte en Vivo por WebSocket y Derivación
+
+El sistema cuenta con un mecanismo de derivación a administrador o soporte técnico cuando el chatbot no puede resolver las dudas del usuario tras **3 fallos**.
+
+### 1. Lógica de Detección de Fallos (Handoff a Humano)
+Cada vez que el usuario realiza una pregunta y el modelo de IA responde, el backend analiza el historial de la conversación en base de datos.
+Si el contador de respuestas fallidas de la IA (mensajes que contienen textos de fallback como `"no se encuentra en los manuales"`, `"no se encuentra en el contexto"`, o `"Lo siento, la respuesta"`) alcanza o supera **3**, el flag `suggestAdmin` se establece en `true` dentro del DTO `ChatAnswer`:
+
+```java
+public record ChatAnswer(
+    String answer,
+    List<SourceSnippet> sources,
+    boolean suggestAdmin // Indica si se debe sugerir redirigir a un admin
+) {}
+```
+
+### 2. Flujo de Derivación desde el Frontend
+Cuando el frontend detecta que la respuesta del chatbot contiene `"suggestAdmin": true`:
+1. **Mostrar Opción:** Se le ofrece al usuario un botón o diálogo: *¿Deseas hablar con soporte técnico/administrador en vivo?*.
+2. **Crear Sesión de Soporte:** Si el usuario acepta, el cliente realiza una petición POST a `/api/support/request`. Esto genera una sesión con estado `WAITING` (o `ACTIVE` asignada a un administrador por defecto) y devuelve el ID único del soporte.
+3. **Conexión WebSocket:** El cliente es redirigido a una nueva interfaz de chat conectándose a `ws://localhost:8080/ws/support`.
+
+### 3. Arquitectura del WebSocket para Soporte en Vivo
+El sistema utiliza la infraestructura de WebSockets de Spring Boot:
+* **Endpoint de conexión:** `ws://localhost:8080/ws/support`
+* **Autenticación:** El interceptor `JwtHandshakeInterceptor` valida el token JWT del usuario durante el handshake inicial.
+* **Controlador WebSocket (`SupportWebSocketHandler`):**
+  * **Mensajes del Cliente:** Valida que el cliente tenga una sesión activa, guarda el mensaje en la base de datos (`senderType = USER`) y lo retransmite en tiempo real al administrador asignado.
+  * **Mensajes del Administrador:** Requiere el `sessionId`, valida que esté asignado a dicha sesión, almacena el mensaje (`senderType = ADMIN`) y lo retransmite al cliente.
+
+---
+
 ## 🚀 Ejecución del Proyecto
 
 1. Asegúrate de compilar y descargar las dependencias necesarias:
@@ -83,3 +115,4 @@ Cuando un usuario sube un archivo PDF al backend, se activa el siguiente flujo d
    ```
 
 El servidor web iniciará por defecto en el puerto `8080`.
+

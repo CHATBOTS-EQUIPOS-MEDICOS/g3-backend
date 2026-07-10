@@ -16,6 +16,8 @@ public interface SupportSessionRepository extends JpaRepository<SupportSession, 
     List<SupportSession> findByUserAndStatusIn(User user, List<SupportStatus> statuses);
     
     Optional<SupportSession> findFirstByUserAndStatusInOrderByCreatedAtDesc(User user, List<SupportStatus> statuses);
+
+    Optional<SupportSession> findFirstByUserOrderByCreatedAtDesc(User user);
     
     List<SupportSession> findByStatusOrderByCreatedAtDesc(SupportStatus status);
     

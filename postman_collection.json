@@ -441,6 +441,199 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Soporte Técnico (Live Chat)",
+      "item": [
+        {
+          "name": "Solicitar Soporte Técnico (Cliente)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/support/request",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "support",
+                "request"
+              ]
+            },
+            "description": "El cliente solicita soporte en vivo. Crea una sesión en espera (WAITING) o retorna la sesión activa actual."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Sesión Activa de Soporte (Cliente)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/support/sessions/active",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "support",
+                "sessions",
+                "active"
+              ]
+            },
+            "description": "Obtiene la sesión de soporte activa o en espera para el cliente autenticado."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Mensajes de la Sesión",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/support/sessions/{{sessionId}}/messages",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "support",
+                "sessions",
+                "{{sessionId}}",
+                "messages"
+              ]
+            },
+            "description": "Obtiene el historial de mensajes de la sesión de soporte especificada."
+          },
+          "response": []
+        },
+        {
+          "name": "Aceptar Sesión de Soporte (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/support/sessions/{{sessionId}}/accept",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "support",
+                "sessions",
+                "{{sessionId}}",
+                "accept"
+              ]
+            },
+            "description": "Un administrador acepta una sesión de soporte que está en estado de espera (WAITING). Requiere rol de ADMIN."
+          },
+          "response": []
+        },
+        {
+          "name": "Cerrar Sesión de Soporte",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/support/sessions/{{sessionId}}/close",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "support",
+                "sessions",
+                "{{sessionId}}",
+                "close"
+              ]
+            },
+            "description": "Cierra y finaliza la sesión de soporte en curso (establece estado RESOLVED)."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Sesiones en Espera (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/support/sessions/waiting",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "support",
+                "sessions",
+                "waiting"
+              ]
+            },
+            "description": "Lista todas las sesiones que esperan asignación de técnico/admin. Requiere rol de ADMIN."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Sesiones Activas del Admin (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/support/sessions/admin/active",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "support",
+                "sessions",
+                "admin",
+                "active"
+              ]
+            },
+            "description": "Obtiene la lista de sesiones de soporte activas asignadas al administrador logueado."
+          },
+          "response": []
+        },
+        {
+          "name": "Historial de Sesiones Cerradas del Admin (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/support/sessions/admin/history",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "support",
+                "sessions",
+                "admin",
+                "history"
+              ]
+            },
+            "description": "Obtiene la lista de sesiones de soporte cerradas/finalizadas asignadas al administrador logueado."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

@@ -28,7 +28,8 @@ public class ChatService {
 
     public record ChatAnswer(
         String answer,
-        List<SourceSnippet> sources
+        List<SourceSnippet> sources,
+        boolean suggestAdmin
     ) {}
 
     public record SourceSnippet(
@@ -98,7 +99,8 @@ public class ChatService {
         if (matchingChunks.isEmpty()) {
             return new ChatAnswer(
                 "No hay manuales cargados en el sistema. Por favor, sube archivos PDF de manuales de equipos médicos para comenzar a chatear.",
-                List.of()
+                List.of(),
+                false
             );
         }
 
@@ -180,6 +182,6 @@ public class ChatService {
                 ))
                 .collect(Collectors.toList());
 
-        return new ChatAnswer(answer, sources);
+        return new ChatAnswer(answer, sources, false);
     }
 }

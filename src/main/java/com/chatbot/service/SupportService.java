@@ -57,43 +57,41 @@ public class SupportService {
      */
     @Transactional
     public SupportSession findOrCreateActiveSession(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
+
+        if (user.getId_rol().getNameRol() != NameRol.CLIENT) {
+            throw new IllegalStateException("Su rol en el sistema (" + user.getId_rol().getNameRol().name() + ") no puede solicitar soporte técnico.");
+        }
+
         Optional<SupportSession> existingSession = findActiveSession(userId);
         if (existingSession.isPresent()) {
             return existingSession.get();
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
-
-        // Buscar el administrador por defecto (primer administrador activo en base de datos)
-        User defaultAdmin = userRepository.findActiveByRole(NameRol.ADMIN).stream()
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No se encontró ningún administrador activo por defecto."));
-
         SupportSession session = new SupportSession();
         session.setUser(user);
-        session.setSupport(defaultAdmin);
-        session.setStatus(SupportStatus.ACTIVE);
+        session.setSupport(null);
+        session.setStatus(SupportStatus.WAITING);
         session.setCreatedAt(LocalDateTime.now());
-        session.setAssignedAt(LocalDateTime.now());
+        session.setAssignedAt(null);
         
         SupportSession savedSession = supportSessionRepository.save(session);
-        log.info("Created active support session and assigned to default admin {}: {}", defaultAdmin.getId(), savedSession.getId());
+        log.info("Created support session in WAITING status: {}", savedSession.getId());
 
-        // Notificar al cliente
+        // Notificar al cliente de que su sesión está en espera
         webSocketHandler.sendToUser(user.getId(), Map.of(
-                "type", "SESSION_ACCEPTED",
+                "type", "SESSION_STATUS",
                 "sessionId", savedSession.getId(),
-                "supportId", defaultAdmin.getId(),
-                "supportName", defaultAdmin.getFullName()
+                "status", SupportStatus.WAITING.name()
         ));
 
-        // Notificar al administrador asignado
-        webSocketHandler.sendToUser(defaultAdmin.getId(), Map.of(
-                "type", "SESSION_ACCEPTED",
+        // Notificar a todos los administradores de una nueva solicitud de soporte en espera
+        webSocketHandler.broadcastToAdmins(Map.of(
+                "type", "NEW_SUPPORT_REQUEST",
                 "sessionId", savedSession.getId(),
-                "supportId", defaultAdmin.getId(),
-                "supportName", defaultAdmin.getFullName()
+                "clientId", user.getId(),
+                "clientName", user.getFullName()
         ));
 
         return savedSession;
@@ -193,7 +191,14 @@ public class SupportService {
         SupportSession updatedSession = supportSessionRepository.save(session);
         log.info("Support session {} resolved/closed", sessionId);
 
-        // Notificar al cliente
+        // Notificar al cliente con un mensaje de sistema y luego cerrar
+        webSocketHandler.sendToUser(session.getUser().getId(), Map.of(
+                "type", "SYSTEM_MESSAGE",
+                "sessionId", sessionId,
+                "content", "Su sesión de soporte ha sido finalizada.",
+                "createdAt", LocalDateTime.now().toString()
+        ));
+
         webSocketHandler.sendToUser(session.getUser().getId(), Map.of(
                 "type", "SESSION_CLOSED",
                 "sessionId", sessionId

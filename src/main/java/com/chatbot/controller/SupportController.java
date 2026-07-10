@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -84,11 +85,15 @@ public class SupportController {
      * retorna la activa.
      */
     @PostMapping("/request")
-    public ResponseEntity<SupportSessionResponse> requestSupport() {
+    public ResponseEntity<?> requestSupport() {
         UUID userId = getAuthenticatedUserId();
         log.info("Client {} requested support", userId);
-        SupportSession session = supportService.findOrCreateActiveSession(userId);
-        return ResponseEntity.ok(SupportSessionResponse.fromEntity(session));
+        try {
+            SupportSession session = supportService.findOrCreateActiveSession(userId);
+            return ResponseEntity.ok(SupportSessionResponse.fromEntity(session));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**

@@ -105,6 +105,14 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                                 "content", content,
                                 "createdAt", dbMessage.getCreatedAt().toString()
                         ));
+                    } else {
+                        // Si la sesión está en espera o no tiene técnico asignado, notificar al cliente
+                        sendToUser(senderId, Map.of(
+                                "type", "SYSTEM_MESSAGE",
+                                "sessionId", supportSession.getId(),
+                                "content", "Por favor, espera unos segundos a que un técnico acepte tu solicitud.",
+                                "createdAt", LocalDateTime.now().toString()
+                        ));
                     }
                 } else if ("ADMIN".equals(role)) {
                     // El administrador envía un mensaje. Requiere un sessionId en el cuerpo

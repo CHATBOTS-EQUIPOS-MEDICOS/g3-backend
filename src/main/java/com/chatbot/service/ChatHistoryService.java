@@ -1,17 +1,16 @@
 package com.chatbot.service;
 
-import com.chatbot.model.ChatMessage;
-import com.chatbot.model.ChatSession;
-import com.chatbot.model.ChatSource;
-import com.chatbot.model.User;
+import com.chatbot.model.*;
 import com.chatbot.repository.ChatMessageRepository;
 import com.chatbot.repository.ChatSessionRepository;
 import com.chatbot.repository.UserRepository;
+import com.chatbot.repository.SupportSessionRepository;
 import com.chatbot.service.ChatService.ChatAnswer;
 import com.chatbot.service.ChatService.SourceSnippet;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,17 +23,20 @@ public class ChatHistoryService {
     private final ChatMessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ChatService chatService;
+    private final SupportSessionRepository supportSessionRepository;
 
     public ChatHistoryService(
             ChatSessionRepository sessionRepository,
             ChatMessageRepository messageRepository,
             UserRepository userRepository,
-            ChatService chatService
+            ChatService chatService,
+            SupportSessionRepository supportSessionRepository
     ) {
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.chatService = chatService;
+        this.supportSessionRepository = supportSessionRepository;
     }
 
     /**
@@ -140,6 +142,48 @@ public class ChatHistoryService {
         modelMessage.setSources(sources);
         messageRepository.save(modelMessage);
 
+        // A continuación, calculamos si se debe sugerir hablar con un administrador.
+        // La condición es que el chatbot no encuentre una respuesta a las preguntas del usuario después de 3 veces.
+        // Si hay una sesión de soporte activa en curso, no se debe sugerir (suggestAdmin = false).
+        // Si la sesión de soporte anterior finalizó, reiniciamos el conteo considerando únicamente mensajes posteriores a su creación.
+        Optional<SupportSession> lastSupportSessionOpt = supportSessionRepository
+                .findFirstByUserOrderByCreatedAtDesc(session.getUser());
+
+        final LocalDateTime cutoffTime;
+        boolean hasActiveSupport = false;
+
+        if (lastSupportSessionOpt.isPresent()) {
+            SupportSession lastSupport = lastSupportSessionOpt.get();
+            if (lastSupport.getStatus() == SupportStatus.WAITING ||
+                lastSupport.getStatus() == SupportStatus.ACTIVE ||
+                lastSupport.getStatus() == SupportStatus.PENDING_USER) {
+                hasActiveSupport = true;
+            }
+            cutoffTime = lastSupport.getCreatedAt();
+        } else {
+            cutoffTime = null;
+        }
+
+        boolean suggestAdmin = false;
+
+        if (!hasActiveSupport) {
+            List<ChatMessage> allSessionMessages = messageRepository.findBySessionOrderByCreatedAtAsc(session);
+            long fallbackCount = allSessionMessages.stream()
+                    .filter(msg -> "MODEL".equals(msg.getRole()))
+                    .filter(msg -> cutoffTime == null || msg.getCreatedAt().isAfter(cutoffTime))
+                    .filter(msg -> {
+                        String content = msg.getContent();
+                        return content != null && (
+                            content.contains("no se encuentra en los manuales") || 
+                            content.contains("no se encuentra en el contexto") ||
+                            content.contains("Lo siento, la respuesta")
+                        );
+                    })
+                    .count();
+
+            suggestAdmin = fallbackCount >= 3;
+        }
+
         // 4. Si el título de la sesión es "Nueva Conversación", renombrarlo según la pregunta o indicar consulta de imagen
         if ("Nueva Conversación".equals(session.getTitle())) {
             String newTitle;
@@ -154,6 +198,6 @@ public class ChatHistoryService {
         // Actualizar fecha de modificación de la sesión
         sessionRepository.save(session);
 
-        return chatAnswer;
+        return new ChatAnswer(chatAnswer.answer(), chatAnswer.sources(), suggestAdmin);
     }
 }
