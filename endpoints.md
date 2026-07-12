@@ -259,7 +259,133 @@ Desactiva la cuenta del usuario autenticado (baja lógica). Cambia su estado a i
 
 ---
 
-### 1.7 [ADMIN] Listar Todos los Usuarios
+### 1.7 Solicitar Código de Recuperación de Contraseña
+
+Permite al usuario solicitar un código OTP para recuperar su contraseña. Envía un correo con un código de 6 caracteres alfanuméricos en mayúsculas válido por 30 minutos.
+
+- **URL:** `/api/auth/recovery/request`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Público (sin autenticación).
+- **Content-Type:** `application/json`
+
+#### Cuerpo de la Petición (JSON)
+
+| Campo | Tipo | Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `email` | String | Sí | Correo electrónico del usuario (formato válido con `@` y `.`). |
+
+##### Ejemplo de Cuerpo de Petición
+```json
+{
+  "email": "juan.perez@example.com"
+}
+```
+
+#### Respuestas
+
+- **`200 OK` (Solicitud Procesada):**
+  ```json
+  {
+    "message": "Código de recuperación enviado al correo electrónico."
+  }
+  ```
+
+- **`400 Bad Request` (Usuario no registrado o inactivo):**
+  - Ejemplo si el correo no está registrado:
+    ```json
+    {
+      "error": "El correo electrónico no está registrado."
+    }
+    ```
+
+---
+
+### 1.8 Verificar Código de Recuperación
+
+Permite verificar que el código OTP alfanumérico enviado por correo sea correcto y no haya expirado. Si es válido, marca el código como verificado y retorna un `resetToken` temporal de tipo UUID.
+
+- **URL:** `/api/auth/recovery/verify`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Público (sin autenticación).
+- **Content-Type:** `application/json`
+
+#### Cuerpo de la Petición (JSON)
+
+| Campo | Tipo | Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `email` | String | Sí | Correo electrónico del usuario. |
+| `code` | String | Sí | Código OTP de 6 caracteres alfanuméricos (no es sensible a mayúsculas/minúsculas). |
+
+##### Ejemplo de Cuerpo de Petición
+```json
+{
+  "email": "juan.perez@example.com",
+  "code": "abc123"
+}
+```
+
+#### Respuestas
+
+- **`200 OK` (Código Verificado):**
+  ```json
+  {
+    "resetToken": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+    "message": "Código verificado exitosamente."
+  }
+  ```
+
+- **`400 Bad Request` (Código inválido, usado o expirado):**
+  ```json
+  {
+    "error": "El código de verificación ha expirado."
+  }
+  ```
+
+---
+
+### 1.9 Restablecer Contraseña con Token
+
+Permite al usuario cambiar su contraseña utilizando el `resetToken` obtenido en el paso de verificación. El token se invalida tras su uso.
+
+- **URL:** `/api/auth/recovery/reset`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Público (sin autenticación).
+- **Content-Type:** `application/json`
+
+#### Cuerpo de la Petición (JSON)
+
+| Campo | Tipo | Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `resetToken` | String (UUID) | Sí | Token obtenido de la validación del código. |
+| `newPassword` | String | Sí | Nueva contraseña (entre 6 y 50 caracteres, con números, mayúsculas y minúsculas). |
+
+##### Ejemplo de Cuerpo de Petición
+```json
+{
+  "resetToken": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "newPassword": "NewSecurePassword456"
+}
+```
+
+#### Respuestas
+
+- **`200 OK` (Reinicio Exitoso):**
+  ```json
+  {
+    "message": "Contraseña restablecida exitosamente."
+  }
+  ```
+
+- **`400 Bad Request` (Token inválido, expirado o ya usado):**
+  ```json
+  {
+    "error": "El token de restablecimiento ya fue utilizado."
+  }
+  ```
+
+---
+
+### 1.10 [ADMIN] Listar Todos los Usuarios
 
 Permite al administrador obtener la lista detallada de todos los usuarios registrados en el sistema, ordenados por fecha de creación de manera descendente (los más recientes primero).
 
@@ -300,7 +426,7 @@ Permite al administrador obtener la lista detallada de todos los usuarios regist
 
 ---
 
-### 1.8 [ADMIN] Crear Usuario
+### 1.11 [ADMIN] Crear Usuario
 
 Permite al administrador registrar un nuevo usuario con cualquier rol en el sistema.
 
@@ -353,7 +479,7 @@ Permite al administrador registrar un nuevo usuario con cualquier rol en el sist
 
 ---
 
-### 1.9 [ADMIN] Editar Usuario
+### 1.12 [ADMIN] Editar Usuario
 
 Permite al administrador actualizar la información de cualquier usuario registrado en el sistema de manera parcial.
 
@@ -401,7 +527,7 @@ Todos los campos son opcionales.
 
 ---
 
-### 1.10 [ADMIN] Desactivar Usuario (Baja Lógica)
+### 1.13 [ADMIN] Desactivar Usuario (Baja Lógica)
 
 Permite al administrador realizar la baja lógica de un usuario. Esto cambia su estado `active` a `false`, registra la `fechaBaja` y modifica el correo añadiendo `"disabled"` (ejemplo: `soporte@exampledisabled.com`) para liberar el correo original.
 
@@ -430,7 +556,7 @@ Permite al administrador realizar la baja lógica de un usuario. Esto cambia su 
 
 ---
 
-### 1.11 [ADMIN] Activar Usuario (Alta Lógica)
+### 1.14 [ADMIN] Activar Usuario (Alta Lógica)
 
 Permite al administrador reactivar un usuario anteriormente desactivado. Cambia su estado `active` a `true`, limpia `fechaBaja` a `null`, y restaura el correo electrónico original (eliminando el sufijo `"disabled"`) si el correo no está siendo usado por otra cuenta activa.
 
