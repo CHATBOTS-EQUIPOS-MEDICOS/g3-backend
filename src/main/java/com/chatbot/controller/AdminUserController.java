@@ -3,7 +3,7 @@ package com.chatbot.controller;
 import com.chatbot.controller.dto.AdminUserCreateRequest;
 import com.chatbot.controller.dto.AdminUserResponse;
 import com.chatbot.controller.dto.AdminUserUpdateRequest;
-import com.chatbot.service.UserService;
+import com.chatbot.service.AdminUserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,16 +21,16 @@ import java.util.UUID;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
-    private final UserService userService;
+    private final AdminUserService adminUserService;
 
-    public AdminUserController(UserService userService) {
-        this.userService = userService;
+    public AdminUserController(AdminUserService adminUserService) {
+        this.adminUserService = adminUserService;
     }
 
     @GetMapping
     public ResponseEntity<?> getAllUsers() {
         try {
-            List<AdminUserResponse> users = userService.getAllUsers();
+            List<AdminUserResponse> users = adminUserService.getAllUsers();
             return ResponseEntity.ok(users);
         } catch (Exception e) {
             e.printStackTrace();
@@ -43,7 +43,7 @@ public class AdminUserController {
     @PostMapping
     public ResponseEntity<?> createUser(@Valid @RequestBody AdminUserCreateRequest request) {
         try {
-            AdminUserResponse response = userService.adminCreateUser(request);
+            AdminUserResponse response = adminUserService.adminCreateUser(request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             Map<String, String> error = new HashMap<>();
@@ -68,7 +68,7 @@ public class AdminUserController {
         }
         try {
             UUID requesterId = UUID.fromString(principal.getName());
-            AdminUserResponse response = userService.adminUpdateUser(id, request, requesterId);
+            AdminUserResponse response = adminUserService.adminUpdateUser(id, request, requesterId);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             Map<String, String> error = new HashMap<>();
@@ -89,7 +89,7 @@ public class AdminUserController {
         }
         try {
             UUID requesterId = UUID.fromString(principal.getName());
-            userService.adminDeactivateUser(id, requesterId);
+            adminUserService.adminDeactivateUser(id, requesterId);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Usuario desactivado exitosamente.");
             return ResponseEntity.ok(response);
@@ -108,7 +108,7 @@ public class AdminUserController {
     @PostMapping("/{id}/activate")
     public ResponseEntity<?> activateUser(@PathVariable UUID id) {
         try {
-            AdminUserResponse response = userService.adminActivateUser(id);
+            AdminUserResponse response = adminUserService.adminActivateUser(id);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             Map<String, String> error = new HashMap<>();

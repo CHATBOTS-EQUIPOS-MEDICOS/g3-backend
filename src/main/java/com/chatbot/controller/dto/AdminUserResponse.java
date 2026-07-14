@@ -22,4 +22,6 @@ public class AdminUserResponse {
     private LocalDateTime fechaBaja;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String workDays;
+    private String workHours;
 }

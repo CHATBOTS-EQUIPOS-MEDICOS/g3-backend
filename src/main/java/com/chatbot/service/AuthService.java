@@ -50,7 +50,7 @@ public class AuthService {
             throw new IllegalArgumentException("El correo ya está registrado.");
         }
 
-        NameRol targetRoleName = request.getRole() != null ? request.getRole() : NameRol.CLIENT;
+        NameRol targetRoleName = NameRol.CLIENT;
         Role role = roleRepository.findByNameRol(targetRoleName)
                 .orElseThrow(() -> new IllegalArgumentException("Rol no encontrado: " + targetRoleName));
 
@@ -115,7 +115,8 @@ public class AuthService {
         // Buscar el código activo más reciente
         PasswordResetCode resetCode = passwordResetCodeRepository
                 .findFirstByEmailAndCodeAndUsedFalseOrderByExpirationTimeDesc(email, code)
-                .orElseThrow(() -> new IllegalArgumentException("El código de verificación es inválido o ya fue utilizado."));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "El código de verificación es inválido o ya fue utilizado."));
 
         // Verificar expiración (validez de 30 minutos)
         if (resetCode.getExpirationTime().isBefore(LocalDateTime.now())) {

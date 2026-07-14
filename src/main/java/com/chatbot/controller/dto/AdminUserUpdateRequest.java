@@ -28,4 +28,7 @@ public class AdminUserUpdateRequest {
     private NameRol role;
 
     private Boolean active;
+
+    private String workDays;
+    private String workHours;
 }

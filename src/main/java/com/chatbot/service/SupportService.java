@@ -88,7 +88,7 @@ public class SupportService {
 
         // Notificar a todos los administradores de una nueva solicitud de soporte en espera
         webSocketHandler.broadcastToAdmins(Map.of(
-                "type", "NEW_SUPPORT_REQUEST",
+                "type", "NEW_WAITING_SESSION",
                 "sessionId", savedSession.getId(),
                 "clientId", user.getId(),
                 "clientName", user.getFullName()

@@ -35,6 +35,9 @@ public class User {
 	@ManyToOne
 	@JoinColumn(name = "id_rol", nullable = false)
 	private Role id_rol;
+
+	@OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	private EmployeeDetail employeeDetail;
 	   
 	@Column()
 	private Boolean active = true;
@@ -127,5 +130,16 @@ public class User {
 
 	public void setFechaBaja(LocalDateTime fechaBaja) {
 		this.fechaBaja = fechaBaja;
+	}
+
+	public EmployeeDetail getEmployeeDetail() {
+		return employeeDetail;
+	}
+
+	public void setEmployeeDetail(EmployeeDetail employeeDetail) {
+		this.employeeDetail = employeeDetail;
+		if (employeeDetail != null && employeeDetail.getUser() != this) {
+			employeeDetail.setUser(this);
+		}
 	}
 }

@@ -32,4 +32,7 @@ public class AdminUserCreateRequest {
 
     @NotNull(message = "El rol es requerido.")
     private NameRol role;
+
+    private String workDays;
+    private String workHours;
 }
