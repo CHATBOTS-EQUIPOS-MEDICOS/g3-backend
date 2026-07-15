@@ -4,9 +4,12 @@ import com.chatbot.model.*;
 import com.chatbot.repository.MessageRepository;
 import com.chatbot.repository.SupportSessionRepository;
 import com.chatbot.repository.UserRepository;
+import com.chatbot.repository.ChatSessionRepository;
+import com.chatbot.repository.ChatMessageRepository;
 import com.chatbot.websocket.SupportWebSocketHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class SupportService {
@@ -25,18 +29,33 @@ public class SupportService {
     private final SupportSessionRepository supportSessionRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final ChatSessionRepository chatSessionRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final GeminiService geminiService;
     private final SupportWebSocketHandler webSocketHandler;
+    private final SupportAcceptanceQueue acceptanceQueue;
+    private final int maxSimultaneousConversations;
 
     public SupportService(
             SupportSessionRepository supportSessionRepository,
             MessageRepository messageRepository,
             UserRepository userRepository,
-            SupportWebSocketHandler webSocketHandler
+            ChatSessionRepository chatSessionRepository,
+            ChatMessageRepository chatMessageRepository,
+            GeminiService geminiService,
+            SupportWebSocketHandler webSocketHandler,
+            SupportAcceptanceQueue acceptanceQueue,
+            @Value("${support.max.simultaneous.conversations:3}") int maxSimultaneousConversations
     ) {
         this.supportSessionRepository = supportSessionRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
+        this.chatSessionRepository = chatSessionRepository;
+        this.chatMessageRepository = chatMessageRepository;
+        this.geminiService = geminiService;
         this.webSocketHandler = webSocketHandler;
+        this.acceptanceQueue = acceptanceQueue;
+        this.maxSimultaneousConversations = maxSimultaneousConversations;
     }
 
     /**
@@ -46,14 +65,15 @@ public class SupportService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
         
-        return supportSessionRepository.findFirstByUserAndStatusInOrderByCreatedAtDesc(
+        List<SupportSession> sessions = supportSessionRepository.findActiveSessionsWithUserAndSupport(
                 user, 
                 Arrays.asList(SupportStatus.WAITING, SupportStatus.ACTIVE, SupportStatus.PENDING_USER)
         );
+        return sessions.stream().findFirst();
     }
 
     /**
-     * Obtiene una sesión de soporte activa, o crea una nueva si no existe y la asigna al administrador por defecto.
+     * Obtiene una sesión de soporte activa, o crea una nueva si no existe. Genera un resumen mediante Gemini.
      */
     @Transactional
     public SupportSession findOrCreateActiveSession(UUID userId) {
@@ -69,12 +89,36 @@ public class SupportService {
             return existingSession.get();
         }
 
+        // Generar resumen de la última conversación del chatbot
+        String summary = "El cliente ha solicitado soporte en vivo.";
+        try {
+            Optional<ChatSession> lastChatSession = chatSessionRepository.findFirstByUserOrderByUpdatedAtDesc(user);
+            if (lastChatSession.isPresent()) {
+                List<ChatMessage> chatMessages = chatMessageRepository.findBySessionOrderByCreatedAtAsc(lastChatSession.get());
+                if (!chatMessages.isEmpty()) {
+                    int skip = Math.max(0, chatMessages.size() - 15);
+                    String conversationLog = chatMessages.stream().skip(skip)
+                            .map(msg -> msg.getRole() + ": " + msg.getContent())
+                            .collect(Collectors.joining("\n"));
+                    
+                    String prompt = "Por favor, resume en un párrafo corto (máximo 3 líneas) el problema técnico o la consulta que está experimentando el usuario basándote en la siguiente conversación:\n\n" + conversationLog;
+                    String aiSummary = geminiService.generateAnswer(prompt, "Eres un asistente técnico experto en redactar resúmenes concisos de soporte.");
+                    if (aiSummary != null && !aiSummary.trim().isEmpty()) {
+                        summary = aiSummary.trim();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error generating chatbot session summary: {}", e.getMessage(), e);
+        }
+
         SupportSession session = new SupportSession();
         session.setUser(user);
         session.setSupport(null);
         session.setStatus(SupportStatus.WAITING);
         session.setCreatedAt(LocalDateTime.now());
         session.setAssignedAt(null);
+        session.setSummary(summary);
         
         SupportSession savedSession = supportSessionRepository.save(session);
         log.info("Created support session in WAITING status: {}", savedSession.getId());
@@ -86,12 +130,13 @@ public class SupportService {
                 "status", SupportStatus.WAITING.name()
         ));
 
-        // Notificar a todos los administradores de una nueva solicitud de soporte en espera
-        webSocketHandler.broadcastToAdmins(Map.of(
+        // Notificar a todos los técnicos de una nueva solicitud de soporte en espera con el resumen
+        webSocketHandler.broadcastToTechnicians(Map.of(
                 "type", "NEW_WAITING_SESSION",
                 "sessionId", savedSession.getId(),
                 "clientId", user.getId(),
-                "clientName", user.getFullName()
+                "clientName", user.getFullName(),
+                "summary", summary
         ));
 
         return savedSession;
@@ -123,54 +168,85 @@ public class SupportService {
      * Busca una sesión por su ID.
      */
     public Optional<SupportSession> getSessionById(UUID sessionId) {
-        return supportSessionRepository.findById(sessionId);
+        return supportSessionRepository.findByIdWithUserAndSupport(sessionId);
     }
 
     /**
-     * Un administrador acepta una sesión de soporte en espera.
+     * Encola una solicitud de aceptación de soporte en la cola de aceptación.
+     */
+    public void queueAcceptance(UUID sessionId, UUID technicianId) {
+        acceptanceQueue.addRequest(sessionId, technicianId);
+    }
+
+    /**
+     * Procesa la aceptación de una sesión por parte de un técnico en un hilo único del Worker con bloqueo pesimista.
      */
     @Transactional
-    public SupportSession acceptSession(UUID adminId, UUID sessionId) {
-        SupportSession session = supportSessionRepository.findById(sessionId)
+    public void processAcceptance(UUID sessionId, UUID technicianId) {
+        // Bloqueo pesimista en base de datos para evitar doble asignación concurrente
+        SupportSession session = supportSessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Sesión de soporte no encontrada con ID: " + sessionId));
 
         if (session.getStatus() != SupportStatus.WAITING) {
-            throw new IllegalStateException("La sesión no se encuentra en estado de espera (WAITING). Estado actual: " + session.getStatus());
+            webSocketHandler.sendToUser(technicianId, Map.of(
+                    "type", "SESSION_CLAIM_FAILED",
+                    "sessionId", sessionId,
+                    "reason", "La sesión ya fue tomada por otro técnico o ya no está en espera."
+            ));
+            return;
         }
 
-        User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador no encontrado con ID: " + adminId));
+        User technician = userRepository.findById(technicianId)
+                .orElseThrow(() -> new IllegalArgumentException("Técnico no encontrado con ID: " + technicianId));
 
-        session.setSupport(admin);
+        if (technician.getId_rol().getNameRol() != NameRol.TECHNICIAN) {
+            webSocketHandler.sendToUser(technicianId, Map.of(
+                    "type", "SESSION_CLAIM_FAILED",
+                    "sessionId", sessionId,
+                    "reason", "Solo los usuarios técnicos pueden aceptar sesiones de soporte."
+            ));
+            return;
+        }
+
+        // Límite de conversaciones simultáneas
+        long activeConversations = supportSessionRepository.countBySupportAndStatus(technician, SupportStatus.ACTIVE);
+        if (activeConversations >= maxSimultaneousConversations) {
+            webSocketHandler.sendToUser(technicianId, Map.of(
+                    "type", "SESSION_CLAIM_FAILED",
+                    "sessionId", sessionId,
+                    "reason", "Has alcanzado el límite de conversaciones simultáneas permitidas (" + maxSimultaneousConversations + ")."
+            ));
+            return;
+        }
+
+        session.setSupport(technician);
         session.setStatus(SupportStatus.ACTIVE);
         session.setAssignedAt(LocalDateTime.now());
 
         SupportSession updatedSession = supportSessionRepository.save(session);
-        log.info("Support session {} accepted by admin {}", sessionId, adminId);
+        log.info("Support session {} accepted and assigned to technician {}", sessionId, technicianId);
 
         // Notificar al cliente
         webSocketHandler.sendToUser(session.getUser().getId(), Map.of(
                 "type", "SESSION_ACCEPTED",
                 "sessionId", sessionId,
-                "supportId", adminId,
-                "supportName", admin.getFullName()
+                "supportId", technicianId,
+                "supportName", technician.getFullName()
         ));
 
-        // Notificar al administrador asignado
-        webSocketHandler.sendToUser(adminId, Map.of(
+        // Notificar al técnico asignado
+        webSocketHandler.sendToUser(technicianId, Map.of(
                 "type", "SESSION_ACCEPTED",
                 "sessionId", sessionId,
-                "supportId", adminId,
-                "supportName", admin.getFullName()
+                "supportId", technicianId,
+                "supportName", technician.getFullName()
         ));
 
-        // Notificar a todos los administradores para que retiren la sesión de su bandeja de espera
-        webSocketHandler.broadcastToAdmins(Map.of(
+        // Notificar a todos los técnicos para que retiren la sesión de su bandeja de espera
+        webSocketHandler.broadcastToTechnicians(Map.of(
                 "type", "SESSION_CLAIMED",
                 "sessionId", sessionId
         ));
-
-        return updatedSession;
     }
 
     /**
@@ -204,7 +280,7 @@ public class SupportService {
                 "sessionId", sessionId
         ));
 
-        // Notificar al administrador si estaba asignado
+        // Notificar al técnico si estaba asignado
         if (session.getSupport() != null) {
             webSocketHandler.sendToUser(session.getSupport().getId(), Map.of(
                     "type", "SESSION_CLOSED",
@@ -223,22 +299,31 @@ public class SupportService {
     }
 
     /**
-     * Obtiene la lista de sesiones activas de un administrador.
+     * Obtiene la lista de sesiones activas asignadas a un técnico.
      */
-    public List<SupportSession> getActiveSessionsForAdmin(UUID adminId) {
-        User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador no encontrado con ID: " + adminId));
-        return supportSessionRepository.findBySupportAndStatusOrderByCreatedAtDesc(admin, SupportStatus.ACTIVE);
+    public List<SupportSession> getActiveSessionsForTechnician(UUID technicianId) {
+        User technician = userRepository.findById(technicianId)
+                .orElseThrow(() -> new IllegalArgumentException("Técnico no encontrado con ID: " + technicianId));
+        return supportSessionRepository.findBySupportAndStatusOrderByCreatedAtDesc(technician, SupportStatus.ACTIVE);
     }
 
     /**
-     * Obtiene la lista de sesiones resueltas o expiradas de un administrador.
+     * Obtiene la lista de sesiones cerradas/historial asignadas a un técnico.
      */
-    public List<SupportSession> getClosedSessionsForAdmin(UUID adminId) {
-        User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador no encontrado con ID: " + adminId));
+    public List<SupportSession> getClosedSessionsForTechnician(UUID technicianId) {
+        User technician = userRepository.findById(technicianId)
+                .orElseThrow(() -> new IllegalArgumentException("Técnico no encontrado con ID: " + technicianId));
         return supportSessionRepository.findBySupportAndStatusInOrderByClosedAtDesc(
-                admin,
+                technician,
+                Arrays.asList(SupportStatus.RESOLVED, SupportStatus.EXPIRED)
+        );
+    }
+
+    /**
+     * Obtiene la lista de todas las sesiones de soporte cerradas (para revisión de administradores).
+     */
+    public List<SupportSession> getAllClosedSessions() {
+        return supportSessionRepository.findByStatusInOrderByClosedAtDesc(
                 Arrays.asList(SupportStatus.RESOLVED, SupportStatus.EXPIRED)
         );
     }

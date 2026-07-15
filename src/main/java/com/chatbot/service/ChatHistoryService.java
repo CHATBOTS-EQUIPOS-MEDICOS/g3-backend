@@ -6,7 +6,6 @@ import com.chatbot.repository.ChatSessionRepository;
 import com.chatbot.repository.UserRepository;
 import com.chatbot.repository.SupportSessionRepository;
 import com.chatbot.service.ChatService.ChatAnswer;
-import com.chatbot.service.ChatService.SourceSnippet;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +29,7 @@ public class ChatHistoryService {
             ChatMessageRepository messageRepository,
             UserRepository userRepository,
             ChatService chatService,
-            SupportSessionRepository supportSessionRepository
-    ) {
+            SupportSessionRepository supportSessionRepository) {
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
@@ -57,7 +55,8 @@ public class ChatHistoryService {
     }
 
     /**
-     * Obtiene todas las sesiones de chat de un usuario ordenadas por fecha de actualización descendente.
+     * Obtiene todas las sesiones de chat de un usuario ordenadas por fecha de
+     * actualización descendente.
      */
     public List<ChatSession> getSessionsForUser(UUID userId) {
         User user = userRepository.findById(userId)
@@ -66,20 +65,23 @@ public class ChatHistoryService {
     }
 
     /**
-     * Obtiene todos los mensajes de una sesión específica, verificando la propiedad del usuario.
+     * Obtiene todos los mensajes de una sesión específica, verificando la propiedad
+     * del usuario.
      */
     public List<ChatMessage> getMessagesInSession(UUID userId, UUID sessionId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
 
         ChatSession session = sessionRepository.findByIdAndUser(sessionId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
 
         return messageRepository.findBySessionOrderByCreatedAtAsc(session);
     }
 
     /**
-     * Elimina una sesión de chat y todos sus mensajes (por cascada de base de datos).
+     * Elimina una sesión de chat y todos sus mensajes (por cascada de base de
+     * datos).
      */
     @Transactional
     public void deleteSession(UUID userId, UUID sessionId) {
@@ -87,14 +89,17 @@ public class ChatHistoryService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
 
         ChatSession session = sessionRepository.findByIdAndUser(sessionId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
 
         sessionRepository.delete(session);
     }
 
     /**
-     * Procesa una pregunta del usuario dentro de una sesión, realiza la consulta RAG,
-     * guarda tanto la pregunta como la respuesta con sus fuentes, y actualiza el título si es necesario.
+     * Procesa una pregunta del usuario dentro de una sesión, realiza la consulta
+     * RAG,
+     * guarda tanto la pregunta como la respuesta con sus fuentes, y actualiza el
+     * título si es necesario.
      */
     @Transactional
     public ChatAnswer askInSession(UUID userId, UUID sessionId, String question) {
@@ -102,12 +107,14 @@ public class ChatHistoryService {
     }
 
     @Transactional
-    public ChatAnswer askInSession(UUID userId, UUID sessionId, String question, String imageBase64, String imageMimeType) {
+    public ChatAnswer askInSession(UUID userId, UUID sessionId, String question, String imageBase64,
+            String imageMimeType) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
 
         ChatSession session = sessionRepository.findByIdAndUser(sessionId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
 
         // A. Obtener el historial de los últimos 5 mensajes previos de la sesión
         List<ChatMessage> previousMessages = messageRepository.findTop5BySessionOrderByCreatedAtDesc(session);
@@ -130,8 +137,7 @@ public class ChatHistoryService {
                 .map(src -> new ChatSource(
                         src.documentName(),
                         src.chunkIndex(),
-                        src.snippet()
-                ))
+                        src.snippet()))
                 .collect(Collectors.toList());
 
         // 3. Guardar el mensaje de respuesta de la IA (MODEL)
@@ -143,9 +149,12 @@ public class ChatHistoryService {
         messageRepository.save(modelMessage);
 
         // A continuación, calculamos si se debe sugerir hablar con un administrador.
-        // La condición es que el chatbot no encuentre una respuesta a las preguntas del usuario después de 3 veces.
-        // Si hay una sesión de soporte activa en curso, no se debe sugerir (suggestAdmin = false).
-        // Si la sesión de soporte anterior finalizó, reiniciamos el conteo considerando únicamente mensajes posteriores a su creación.
+        // La condición es que el chatbot no encuentre una respuesta a las preguntas del
+        // usuario después de 3 veces.
+        // Si hay una sesión de soporte activa en curso, no se debe sugerir
+        // (suggestAdmin = false).
+        // Si la sesión de soporte anterior finalizó, reiniciamos el conteo considerando
+        // únicamente mensajes posteriores a su creación.
         Optional<SupportSession> lastSupportSessionOpt = supportSessionRepository
                 .findFirstByUserOrderByCreatedAtDesc(session.getUser());
 
@@ -155,8 +164,8 @@ public class ChatHistoryService {
         if (lastSupportSessionOpt.isPresent()) {
             SupportSession lastSupport = lastSupportSessionOpt.get();
             if (lastSupport.getStatus() == SupportStatus.WAITING ||
-                lastSupport.getStatus() == SupportStatus.ACTIVE ||
-                lastSupport.getStatus() == SupportStatus.PENDING_USER) {
+                    lastSupport.getStatus() == SupportStatus.ACTIVE ||
+                    lastSupport.getStatus() == SupportStatus.PENDING_USER) {
                 hasActiveSupport = true;
             }
             cutoffTime = lastSupport.getCreatedAt();
@@ -173,18 +182,17 @@ public class ChatHistoryService {
                     .filter(msg -> cutoffTime == null || msg.getCreatedAt().isAfter(cutoffTime))
                     .filter(msg -> {
                         String content = msg.getContent();
-                        return content != null && (
-                            content.contains("no se encuentra en los manuales") || 
-                            content.contains("no se encuentra en el contexto") ||
-                            content.contains("Lo siento, la respuesta")
-                        );
+                        return content != null && (content.contains("no se encuentra en los manuales") ||
+                                content.contains("no se encuentra en el contexto") ||
+                                content.contains("Lo siento, la respuesta"));
                     })
                     .count();
 
             suggestAdmin = fallbackCount >= 3;
         }
 
-        // 4. Si el título de la sesión es "Nueva Conversación", renombrarlo según la pregunta o indicar consulta de imagen
+        // 4. Si el título de la sesión es "Nueva Conversación", renombrarlo según la
+        // pregunta o indicar consulta de imagen
         if ("Nueva Conversación".equals(session.getTitle())) {
             String newTitle;
             if (question != null && !question.trim().isEmpty()) {

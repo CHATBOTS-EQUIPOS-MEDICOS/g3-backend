@@ -38,6 +38,9 @@ public class SupportSession {
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
+
+    @Column(name = "summary", columnDefinition = "TEXT")
+    private String summary;
     
     //GETTERS AND SETTERS
 
@@ -117,5 +120,13 @@ public class SupportSession {
 
     public void setExpiresAt(LocalDateTime expiresAt) {
         this.expiresAt = expiresAt;
+    }
+
+    public String getSummary() {
+        return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
     }
 }

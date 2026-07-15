@@ -82,8 +82,7 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                     // Guardar el mensaje en la base de datos
                     Message dbMessage = supportService.saveMessage(supportSession.getId(), senderId, SenderType.USER, content);
 
-                    // Reenviar el mensaje al cliente (para confirmar recepción)
-                    sendToUser(senderId, Map.of(
+                    Map<String, Object> payload = Map.of(
                             "type", "MESSAGE",
                             "id", dbMessage.getId(),
                             "sessionId", supportSession.getId(),
@@ -91,20 +90,15 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                             "senderType", "USER",
                             "content", content,
                             "createdAt", dbMessage.getCreatedAt().toString()
-                    ));
+                    );
 
-                    // Si la sesión está activa y tiene un administrador asignado, reenviarle el mensaje
+                    // Reenviar el mensaje al cliente (para confirmar recepción)
+                    sendToUser(senderId, payload);
+
+                    // Si la sesión está activa y tiene un técnico asignado, reenviarle el mensaje
                     if (supportSession.getStatus() == SupportStatus.ACTIVE && supportSession.getSupport() != null) {
                         UUID supportId = supportSession.getSupport().getId();
-                        sendToUser(supportId, Map.of(
-                                "type", "MESSAGE",
-                                "id", dbMessage.getId(),
-                                "sessionId", supportSession.getId(),
-                                "senderId", senderId,
-                                "senderType", "USER",
-                                "content", content,
-                                "createdAt", dbMessage.getCreatedAt().toString()
-                        ));
+                        sendToUser(supportId, payload);
                     } else {
                         // Si la sesión está en espera o no tiene técnico asignado, notificar al cliente
                         sendToUser(senderId, Map.of(
@@ -114,8 +108,8 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                                 "createdAt", LocalDateTime.now().toString()
                         ));
                     }
-                } else if ("ADMIN".equals(role)) {
-                    // El administrador envía un mensaje. Requiere un sessionId en el cuerpo
+                } else if ("TECHNICIAN".equals(role)) {
+                    // El técnico envía un mensaje. Requiere un sessionId en el cuerpo
                     if (!jsonNode.has("sessionId")) {
                         sendToUser(senderId, Map.of("type", "ERROR", "message", "Missing sessionId parameter."));
                         return;
@@ -124,37 +118,31 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                     SupportSession supportSession = supportService.getSessionById(sessionId)
                             .orElseThrow(() -> new IllegalArgumentException("Sesión de soporte no encontrada."));
 
-                    // Verificar que el administrador sea el asignado
+                    // Verificar que el técnico sea el asignado
                     if (supportSession.getSupport() == null || !supportSession.getSupport().getId().equals(senderId)) {
                         sendToUser(senderId, Map.of("type", "ERROR", "message", "No estás asignado a esta sesión."));
                         return;
                     }
 
                     // Guardar el mensaje en la base de datos
-                    Message dbMessage = supportService.saveMessage(sessionId, senderId, SenderType.ADMIN, content);
+                    Message dbMessage = supportService.saveMessage(sessionId, senderId, SenderType.TECHNICIAN, content);
 
-                    // Confirmar recepción al administrador
-                    sendToUser(senderId, Map.of(
+                    Map<String, Object> payload = Map.of(
                             "type", "MESSAGE",
                             "id", dbMessage.getId(),
                             "sessionId", sessionId,
                             "senderId", senderId,
-                            "senderType", "ADMIN",
+                            "senderType", "TECHNICIAN",
                             "content", content,
                             "createdAt", dbMessage.getCreatedAt().toString()
-                    ));
+                    );
+
+                    // Confirmar recepción al técnico
+                    sendToUser(senderId, payload);
 
                     // Reenviar el mensaje al cliente
                     UUID clientId = supportSession.getUser().getId();
-                    sendToUser(clientId, Map.of(
-                            "type", "MESSAGE",
-                            "id", dbMessage.getId(),
-                            "sessionId", sessionId,
-                            "senderId", senderId,
-                            "senderType", "ADMIN",
-                            "content", content,
-                            "createdAt", dbMessage.getCreatedAt().toString()
-                    ));
+                    sendToUser(clientId, payload);
                 }
             } else if ("PING".equals(type)) {
                 sendToUser(senderId, Map.of("type", "PONG"));
@@ -188,9 +176,9 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * Envía un mensaje de difusión a todos los administradores conectados.
+     * Envía un mensaje de difusión a todos los técnicos conectados.
      */
-    public void broadcastToAdmins(Object payload) {
+    public void broadcastToTechnicians(Object payload) {
         String json;
         try {
             json = objectMapper.writeValueAsString(payload);
@@ -202,12 +190,12 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
         TextMessage textMessage = new TextMessage(json);
         userSessions.forEach((userId, session) -> {
             String role = (String) session.getAttributes().get("role");
-            if ("ADMIN".equals(role) && session.isOpen()) {
+            if ("TECHNICIAN".equals(role) && session.isOpen()) {
                 try {
                     session.sendMessage(textMessage);
-                    log.debug("Broadcasted WS message to admin {}", userId);
+                    log.debug("Broadcasted WS message to technician {}", userId);
                 } catch (IOException e) {
-                    log.error("Failed to broadcast WS message to admin {}", userId, e);
+                    log.error("Failed to broadcast WS message to technician {}", userId, e);
                 }
             }
         });
