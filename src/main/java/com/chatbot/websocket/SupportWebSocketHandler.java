@@ -144,6 +144,48 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                     UUID clientId = supportSession.getUser().getId();
                     sendToUser(clientId, payload);
                 }
+            } else if ("REQUEST_SUPPORT".equals(type)) {
+                if (!"CLIENT".equals(role)) {
+                    sendToUser(senderId, Map.of("type", "ERROR", "message", "Solo los clientes pueden solicitar soporte."));
+                    return;
+                }
+                SupportSession activeSession = supportService.findOrCreateActiveSession(senderId);
+                sendToUser(senderId, Map.of(
+                        "type", "SESSION_STATUS",
+                        "sessionId", activeSession.getId(),
+                        "status", activeSession.getStatus().name()
+                ));
+            } else if ("ACCEPT_SUPPORT".equals(type)) {
+                if (!"TECHNICIAN".equals(role)) {
+                    sendToUser(senderId, Map.of("type", "ERROR", "message", "Solo los técnicos pueden aceptar solicitudes de soporte."));
+                    return;
+                }
+                if (!jsonNode.has("sessionId")) {
+                    sendToUser(senderId, Map.of("type", "ERROR", "message", "Falta el parámetro sessionId."));
+                    return;
+                }
+                UUID sessionId = UUID.fromString(jsonNode.get("sessionId").asText());
+                supportService.queueAcceptance(sessionId, senderId);
+            } else if ("CLOSE_SUPPORT".equals(type)) {
+                if (!jsonNode.has("sessionId")) {
+                    sendToUser(senderId, Map.of("type", "ERROR", "message", "Falta el parámetro sessionId."));
+                    return;
+                }
+                UUID sessionId = UUID.fromString(jsonNode.get("sessionId").asText());
+                SupportSession supportSession = supportService.getSessionById(sessionId)
+                        .orElseThrow(() -> new IllegalArgumentException("Sesión de soporte no encontrada."));
+
+                // Validar permisos de cierre: Solo el técnico asignado puede cerrar
+                if (!"TECHNICIAN".equals(role)) {
+                    sendToUser(senderId, Map.of("type", "ERROR", "message", "Solo el técnico asignado puede cerrar la conversación de soporte."));
+                    return;
+                }
+                if (supportSession.getSupport() == null || !supportSession.getSupport().getId().equals(senderId)) {
+                    sendToUser(senderId, Map.of("type", "ERROR", "message", "No puedes cerrar una sesión que no tienes asignada."));
+                    return;
+                }
+
+                supportService.closeSession(sessionId);
             } else if ("PING".equals(type)) {
                 sendToUser(senderId, Map.of("type", "PONG"));
             }

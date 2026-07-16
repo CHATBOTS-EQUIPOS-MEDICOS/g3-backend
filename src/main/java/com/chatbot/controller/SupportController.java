@@ -190,11 +190,11 @@ public class SupportController {
         SupportSession session = supportService.getSessionById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Sesión de soporte no encontrada."));
 
-        // Validar permisos de cierre
-        if ("CLIENT".equals(role) && !session.getUser().getId().equals(userId)) {
-            return ResponseEntity.status(403).body(Map.of("error", "No puedes cerrar una sesión de otro usuario."));
+        // Validar permisos de cierre: Solo el técnico asignado puede cerrar
+        if (!"TECHNICIAN".equals(role)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Solo el técnico asignado puede cerrar la conversación de soporte."));
         }
-        if ("TECHNICIAN".equals(role) && (session.getSupport() == null || !session.getSupport().getId().equals(userId))) {
+        if (session.getSupport() == null || !session.getSupport().getId().equals(userId)) {
             return ResponseEntity.status(403).body(Map.of("error", "No puedes cerrar una sesión que no tienes asignada."));
         }
 
