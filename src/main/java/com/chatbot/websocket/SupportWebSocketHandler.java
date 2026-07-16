@@ -38,28 +38,37 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        UUID userId = UUID.fromString((String) session.getAttributes().get("userId"));
-        userSessions.put(userId, session);
-        String role = (String) session.getAttributes().get("role");
-        log.info("WebSocket connection established. User: {}, Role: {}", userId, role);
+        try {
+            UUID userId = UUID.fromString((String) session.getAttributes().get("userId"));
+            userSessions.put(userId, session);
+            String role = (String) session.getAttributes().get("role");
+            log.info("WebSocket connection established. User: {}, Role: {}", userId, role);
 
-        // Si es un cliente y tiene una sesión activa, notificarle de su conexión
-        if ("CLIENT".equals(role)) {
-            supportService.findActiveSession(userId).ifPresent(supportSession -> {
-                sendToUser(userId, Map.of(
-                        "type", "SESSION_STATUS",
-                        "sessionId", supportSession.getId(),
-                        "status", supportSession.getStatus().name()
-                ));
-            });
+            // Si es un cliente y tiene una sesión activa, notificarle de su conexión
+            if ("CLIENT".equals(role)) {
+                supportService.findActiveSession(userId).ifPresent(supportSession -> {
+                    sendToUser(userId, Map.of(
+                            "type", "SESSION_STATUS",
+                            "sessionId", supportSession.getId(),
+                            "status", supportSession.getStatus().name()
+                    ));
+                });
+            }
+        } catch (Exception e) {
+            log.error("Error in afterConnectionEstablished: {}", e.getMessage(), e);
+            session.close(CloseStatus.SERVER_ERROR);
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        UUID userId = UUID.fromString((String) session.getAttributes().get("userId"));
-        userSessions.remove(userId);
-        log.info("WebSocket connection closed. User: {}", userId);
+        try {
+            UUID userId = UUID.fromString((String) session.getAttributes().get("userId"));
+            userSessions.remove(userId);
+            log.info("WebSocket connection closed. User: {}", userId);
+        } catch (Exception e) {
+            log.error("Error in afterConnectionClosed: {}", e.getMessage(), e);
+        }
     }
 
     @Override

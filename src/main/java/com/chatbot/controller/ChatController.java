@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(origins = "*") // Permitir una conexión sencilla desde el frontend
+@CrossOrigin(origins = "http://localhost:4200")
 @Slf4j
 public class ChatController {
 
@@ -36,52 +36,50 @@ public class ChatController {
     }
 
     public record AskRequest(
-        String question,
-        String imageBase64,
-        String imageMimeType
-    ) {}
+            String question,
+            String imageBase64,
+            String imageMimeType) {
+    }
 
-    // DTOs de salida seguros para evitar recursión y problemas de Lazy Loading de Hibernate
+    // DTOs de salida seguros para evitar recursión y problemas de Lazy Loading de
+    // Hibernate
     public record ChatSessionResponse(
-        UUID id,
-        String title,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
-    ) {
+            UUID id,
+            String title,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
         public static ChatSessionResponse fromEntity(ChatSession session) {
             return new ChatSessionResponse(
-                session.getId(),
-                session.getTitle(),
-                session.getCreatedAt(),
-                session.getUpdatedAt()
-            );
+                    session.getId(),
+                    session.getTitle(),
+                    session.getCreatedAt(),
+                    session.getUpdatedAt());
         }
     }
 
     public record ChatMessageResponse(
-        UUID id,
-        String role,
-        String content,
-        String imageBase64,
-        String imageMimeType,
-        List<ChatSource> sources,
-        LocalDateTime createdAt
-    ) {
+            UUID id,
+            String role,
+            String content,
+            String imageBase64,
+            String imageMimeType,
+            List<ChatSource> sources,
+            LocalDateTime createdAt) {
         public static ChatMessageResponse fromEntity(ChatMessage message) {
             return new ChatMessageResponse(
-                message.getId(),
-                message.getRole(),
-                message.getContent(),
-                message.getImageBase64(),
-                message.getImageMimeType(),
-                message.getSources(),
-                message.getCreatedAt()
-            );
+                    message.getId(),
+                    message.getRole(),
+                    message.getContent(),
+                    message.getImageBase64(),
+                    message.getImageMimeType(),
+                    message.getSources(),
+                    message.getCreatedAt());
         }
     }
 
     /**
-     * Obtiene el ID del usuario autenticado a partir del contexto de seguridad de Spring Security.
+     * Obtiene el ID del usuario autenticado a partir del contexto de seguridad de
+     * Spring Security.
      */
     private UUID getAuthenticatedUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -92,7 +90,8 @@ public class ChatController {
     }
 
     /**
-     * Endpoint público para realizar preguntas rápidas y anónimas basadas en los manuales de equipos médicos subidos.
+     * Endpoint público para realizar preguntas rápidas y anónimas basadas en los
+     * manuales de equipos médicos subidos.
      * No guarda historial de chat.
      */
     @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -121,18 +120,16 @@ public class ChatController {
 
         try {
             ChatAnswer answer = chatService.askQuestion(
-                hasQuestion ? question.trim() : null,
-                imageBase64,
-                imageMimeType
-            );
+                    hasQuestion ? question.trim() : null,
+                    imageBase64,
+                    imageMimeType);
             return ResponseEntity.ok(answer);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error al procesar la pregunta de chat pública", e);
             return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to answer the question: " + e.getMessage()
-            ));
+                    "error", "Failed to answer the question: " + e.getMessage()));
         }
     }
 
@@ -160,7 +157,8 @@ public class ChatController {
     }
 
     /**
-     * Obtiene todos los mensajes de una sesión de chat específica perteneciente al usuario autenticado.
+     * Obtiene todos los mensajes de una sesión de chat específica perteneciente al
+     * usuario autenticado.
      */
     @GetMapping("/sessions/{sessionId}/messages")
     public ResponseEntity<List<ChatMessageResponse>> getMessages(@PathVariable UUID sessionId) {
@@ -172,8 +170,10 @@ public class ChatController {
     }
 
     /**
-     * Realiza una pregunta dentro de una sesión de chat específica. Guarda la pregunta,
-     * realiza el RAG y guarda la respuesta de la IA en la base de datos asociada a la sesión.
+     * Realiza una pregunta dentro de una sesión de chat específica. Guarda la
+     * pregunta,
+     * realiza el RAG y guarda la respuesta de la IA en la base de datos asociada a
+     * la sesión.
      */
     @PostMapping(value = "/sessions/{sessionId}/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> askInSession(
@@ -203,20 +203,18 @@ public class ChatController {
         UUID userId = getAuthenticatedUserId();
         try {
             ChatAnswer answer = chatHistoryService.askInSession(
-                userId,
-                sessionId,
-                hasQuestion ? question.trim() : null,
-                imageBase64,
-                imageMimeType
-            );
+                    userId,
+                    sessionId,
+                    hasQuestion ? question.trim() : null,
+                    imageBase64,
+                    imageMimeType);
             return ResponseEntity.ok(answer);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error al procesar la pregunta de chat dentro de la sesión {}", sessionId, e);
             return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to answer the question in session: " + e.getMessage()
-            ));
+                    "error", "Failed to answer the question in session: " + e.getMessage()));
         }
     }
 

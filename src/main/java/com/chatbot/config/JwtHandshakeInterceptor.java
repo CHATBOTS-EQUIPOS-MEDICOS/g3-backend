@@ -52,6 +52,11 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
             }
         }
 
+        // Si el token está vacío en los query parameters, tratarlo como null para buscar en cookies
+        if (token != null && token.trim().isEmpty()) {
+            token = null;
+        }
+
         // 2. Extraer de las cookies si no se encuentra en query params
         if (token == null && request instanceof ServletServerHttpRequest servletRequest) {
             HttpServletRequest httpServletRequest = servletRequest.getServletRequest();
