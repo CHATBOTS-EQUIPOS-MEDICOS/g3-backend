@@ -439,6 +439,78 @@
             "description": "Elimina una sesión de chat y todos sus mensajes asociados en cascada."
           },
           "response": []
+        },
+        {
+          "name": "Cerrar Sesión de Chat",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/chat/sessions/3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2/close",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "sessions",
+                "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
+                "close"
+              ]
+            },
+            "description": "Marca una sesión de chat como cerrada para que no admita nuevas preguntas."
+          },
+          "response": []
+        },
+        {
+          "name": "Reaccionar con Like a un Mensaje",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/chat/messages/bfa4429e-cd56-42d4-a0fb-4050b13cf0ea/like",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "messages",
+                "bfa4429e-cd56-42d4-a0fb-4050b13cf0ea",
+                "like"
+              ]
+            },
+            "description": "Califica de forma positiva un mensaje del historial del usuario autenticado."
+          },
+          "response": []
+        },
+        {
+          "name": "Reaccionar con Dislike a un Mensaje",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/chat/messages/bfa4429e-cd56-42d4-a0fb-4050b13cf0ea/dislike",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "chat",
+                "messages",
+                "bfa4429e-cd56-42d4-a0fb-4050b13cf0ea",
+                "dislike"
+              ]
+            },
+            "description": "Califica de forma negativa un mensaje del historial del usuario autenticado."
+          },
+          "response": []
         }
       ]
     },

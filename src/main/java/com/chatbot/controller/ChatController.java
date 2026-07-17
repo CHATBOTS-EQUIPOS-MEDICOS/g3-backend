@@ -47,13 +47,17 @@ public class ChatController {
             UUID id,
             String title,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            LocalDateTime updatedAt,
+            Boolean isClosed,
+            LocalDateTime closedAt) {
         public static ChatSessionResponse fromEntity(ChatSession session) {
             return new ChatSessionResponse(
                     session.getId(),
                     session.getTitle(),
                     session.getCreatedAt(),
-                    session.getUpdatedAt());
+                    session.getUpdatedAt(),
+                    session.getIsClosed(),
+                    session.getClosedAt());
         }
     }
 
@@ -64,7 +68,8 @@ public class ChatController {
             String imageBase64,
             String imageMimeType,
             List<ChatSource> sources,
-            LocalDateTime createdAt) {
+            LocalDateTime createdAt,
+            Boolean liked) {
         public static ChatMessageResponse fromEntity(ChatMessage message) {
             return new ChatMessageResponse(
                     message.getId(),
@@ -73,7 +78,8 @@ public class ChatController {
                     message.getImageBase64(),
                     message.getImageMimeType(),
                     message.getSources(),
-                    message.getCreatedAt());
+                    message.getCreatedAt(),
+                    message.getLiked());
         }
     }
 
@@ -226,5 +232,43 @@ public class ChatController {
         UUID userId = getAuthenticatedUserId();
         chatHistoryService.deleteSession(userId, sessionId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Cierra una sesión de chat para el usuario autenticado.
+     */
+    @PostMapping("/sessions/{sessionId}/close")
+    public ResponseEntity<ChatSessionResponse> closeSession(@PathVariable UUID sessionId) {
+        UUID userId = getAuthenticatedUserId();
+        ChatSession session = chatHistoryService.closeSession(userId, sessionId);
+        return ResponseEntity.ok(ChatSessionResponse.fromEntity(session));
+    }
+
+    /**
+     * Registra un "like" (calificación positiva) en un mensaje del usuario.
+     */
+    @PostMapping("/messages/{messageId}/like")
+    public ResponseEntity<ChatMessageResponse> likeMessage(@PathVariable UUID messageId) {
+        UUID userId = getAuthenticatedUserId();
+        try {
+            ChatMessage message = chatHistoryService.rateMessage(userId, messageId, true);
+            return ResponseEntity.ok(ChatMessageResponse.fromEntity(message));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Registra un "dislike" (calificación negativa) en un mensaje del usuario.
+     */
+    @PostMapping("/messages/{messageId}/dislike")
+    public ResponseEntity<ChatMessageResponse> dislikeMessage(@PathVariable UUID messageId) {
+        UUID userId = getAuthenticatedUserId();
+        try {
+            ChatMessage message = chatHistoryService.rateMessage(userId, messageId, false);
+            return ResponseEntity.ok(ChatMessageResponse.fromEntity(message));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

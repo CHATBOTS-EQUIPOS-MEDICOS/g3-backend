@@ -37,6 +37,9 @@ public class ChatMessage {
     @Column(name = "sources")
     private List<ChatSource> sources;
 
+    @Column(name = "liked")
+    private Boolean liked; // Indica si el mensaje tiene like (true), dislike (false) o no ha sido calificado (null)
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -45,6 +48,10 @@ public class ChatMessage {
     }
 
     public ChatMessage(UUID id, ChatSession session, String role, String content, String imageBase64, String imageMimeType, List<ChatSource> sources, LocalDateTime createdAt) {
+        this(id, session, role, content, imageBase64, imageMimeType, sources, createdAt, null);
+    }
+
+    public ChatMessage(UUID id, ChatSession session, String role, String content, String imageBase64, String imageMimeType, List<ChatSource> sources, LocalDateTime createdAt, Boolean liked) {
         this.id = id;
         this.session = session;
         this.role = role;
@@ -53,6 +60,7 @@ public class ChatMessage {
         this.imageMimeType = imageMimeType;
         this.sources = sources;
         this.createdAt = createdAt;
+        this.liked = liked;
     }
 
     public UUID getId() {
@@ -117,5 +125,13 @@ public class ChatMessage {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getLiked() {
+        return liked;
+    }
+
+    public void setLiked(Boolean liked) {
+        this.liked = liked;
     }
 }

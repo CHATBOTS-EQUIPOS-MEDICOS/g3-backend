@@ -116,6 +116,11 @@ public class ChatHistoryService {
                 .orElseThrow(
                         () -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
 
+        // Verificar si la sesión de chat ya está cerrada
+        if (Boolean.TRUE.equals(session.getIsClosed())) {
+            throw new IllegalStateException("No se pueden enviar mensajes a una sesión de chat cerrada.");
+        }
+
         // A. Obtener el historial de los últimos 5 mensajes previos de la sesión
         List<ChatMessage> previousMessages = messageRepository.findTop5BySessionOrderByCreatedAtDesc(session);
         java.util.Collections.reverse(previousMessages);
@@ -207,5 +212,44 @@ public class ChatHistoryService {
         sessionRepository.save(session);
 
         return new ChatAnswer(chatAnswer.answer(), chatAnswer.sources(), suggestAdmin);
+    }
+
+    /**
+     * Cierra una sesión de chat marcándola como cerrada y estableciendo la fecha y hora de cierre.
+     */
+    @Transactional
+    public ChatSession closeSession(UUID userId, UUID sessionId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
+
+        ChatSession session = sessionRepository.findByIdAndUser(sessionId, user)
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
+
+        session.setIsClosed(true);
+        session.setClosedAt(LocalDateTime.now());
+        return sessionRepository.save(session);
+    }
+
+    /**
+     * Califica un mensaje (like/dislike) si pertenece a una sesión del usuario autenticado.
+     */
+    @Transactional
+    public ChatMessage rateMessage(UUID userId, UUID messageId, Boolean liked) {
+        ChatMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Mensaje no encontrado con ID: " + messageId));
+
+        // Validar que la sesión del mensaje pertenece al usuario
+        if (!message.getSession().getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("El mensaje no pertenece a una sesión de este usuario.");
+        }
+
+        // Validar que el mensaje sea de la IA (MODEL)
+        if (!"MODEL".equalsIgnoreCase(message.getRole())) {
+            throw new IllegalArgumentException("Solo se pueden calificar los mensajes de la IA.");
+        }
+
+        message.setLiked(liked);
+        return messageRepository.save(message);
     }
 }

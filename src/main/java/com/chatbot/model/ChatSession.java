@@ -30,6 +30,14 @@ public class ChatSession {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // Indica si la sesión de chat con la IA ha sido cerrada por el usuario
+    @Column(name = "is_closed", nullable = false)
+    private Boolean isClosed = false;
+
+    // Fecha y hora en la que se cerró la sesión
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
     public ChatSession() {
     }
 
@@ -39,6 +47,17 @@ public class ChatSession {
         this.title = title;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.isClosed = false;
+    }
+
+    public ChatSession(UUID id, User user, String title, LocalDateTime createdAt, LocalDateTime updatedAt, Boolean isClosed, LocalDateTime closedAt) {
+        this.id = id;
+        this.user = user;
+        this.title = title;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.isClosed = isClosed;
+        this.closedAt = closedAt;
     }
 
     public UUID getId() {
@@ -79,5 +98,21 @@ public class ChatSession {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Boolean getIsClosed() {
+        return isClosed;
+    }
+
+    public void setIsClosed(Boolean isClosed) {
+        this.isClosed = isClosed;
+    }
+
+    public LocalDateTime getClosedAt() {
+        return closedAt;
+    }
+
+    public void setClosedAt(LocalDateTime closedAt) {
+        this.closedAt = closedAt;
     }
 }

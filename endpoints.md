@@ -806,7 +806,9 @@ Crea una nueva conversación para el usuario autenticado.
     "id": "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
     "title": "Mantenimiento Preventivo D100",
     "createdAt": "2026-07-06T10:05:00",
-    "updatedAt": "2026-07-06T10:05:00"
+    "updatedAt": "2026-07-06T10:05:00",
+    "isClosed": false,
+    "closedAt": null
   }
   ```
 
@@ -829,7 +831,9 @@ Obtiene la lista de todas las sesiones de chat iniciadas por el usuario autentic
       "id": "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
       "title": "Mantenimiento Preventivo D100",
       "createdAt": "2026-07-06T10:05:00",
-      "updatedAt": "2026-07-06T10:05:25"
+      "updatedAt": "2026-07-06T10:05:25",
+      "isClosed": false,
+      "closedAt": null
     }
   ]
   ```
@@ -862,7 +866,8 @@ Obtiene el historial completo de mensajes y respuestas de una conversación espe
       "imageBase64": null,
       "imageMimeType": null,
       "sources": null,
-      "createdAt": "2026-07-06T10:05:20"
+      "createdAt": "2026-07-06T10:05:20",
+      "liked": null
     },
     {
       "id": "c1f77d3b-ae29-4b21-a185-32e65c589b21",
@@ -871,7 +876,8 @@ Obtiene el historial completo de mensajes y respuestas de una conversación espe
       "imageBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk...",
       "imageMimeType": "image/png",
       "sources": null,
-      "createdAt": "2026-07-06T10:06:10"
+      "createdAt": "2026-07-06T10:06:10",
+      "liked": null
     },
     {
       "id": "d1a63cde-f1b2-4d2c-8ab5-f12b2a75908e",
@@ -886,7 +892,8 @@ Obtiene el historial completo de mensajes y respuestas de una conversación espe
           "snippet": "En caso de fallo de alimentación, el LED rojo parpadeará alternamente..."
         }
       ],
-      "createdAt": "2026-07-06T10:06:15"
+      "createdAt": "2026-07-06T10:06:15",
+      "liked": true
     }
   ]
   ```
@@ -953,6 +960,14 @@ Si el título actual de la sesión es "Nueva Conversación", el sistema actualiz
     }
     ```
 
+- **`500 Internal Server Error` (Sesión cerrada):**
+  - Si se intenta consultar dentro de una sesión cerrada:
+    ```json
+    {
+      "error": "Failed to answer the question in session: No se pueden enviar mensajes a una sesión de chat cerrada."
+    }
+    ```
+
 ---
 
 ### 4.5 Eliminar Sesión de Chat
@@ -973,6 +988,125 @@ Elimina una sesión de chat específica y todos sus mensajes asociados en cascad
 
 - **`204 No Content`:**
   La sesión de chat e historial de mensajes asociados se han eliminado correctamente de la base de datos.
+
+---
+
+### 4.6 Cerrar Sesión de Chat
+
+Permite al usuario marcar una sesión de chat como cerrada/inactiva. Una vez cerrada, no se pueden enviar más mensajes (preguntas) a dicha sesión. El sistema valida que la sesión exista y que pertenezca al usuario autenticado.
+
+- **URL:** `/api/chat/sessions/{sessionId}/close`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Usuario autenticado
+
+#### Parámetros
+
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                     |
+| :---------- | :-------- | :--- | :-------- | :---------------------------------------------- |
+| `sessionId` | Path      | UUID | Sí        | Identificador único de la sesión a cerrar.      |
+
+#### Respuestas
+
+- **`200 OK` (Sesión Cerrada Exitosamente):**
+  ```json
+  {
+    "id": "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
+    "title": "Mantenimiento Preventivo D100",
+    "createdAt": "2026-07-06T10:05:00",
+    "updatedAt": "2026-07-06T10:05:25",
+    "isClosed": true,
+    "closedAt": "2026-07-17T11:55:00"
+  }
+  ```
+
+- **`400 Bad Request` (Sesión no encontrada o no pertenece al usuario):**
+  ```json
+  {
+    "error": "Sesión de chat no encontrada o no pertenece al usuario."
+  }
+  ```
+
+---
+
+### 4.7 Reaccionar con Like a un Mensaje
+
+Registra una calificación positiva (`liked` = `true`) para un mensaje específico. Valida que el mensaje exista, pertenezca a una sesión del usuario autenticado, y que haya sido generado por la IA (rol `MODEL`).
+
+- **URL:** `/api/chat/messages/{messageId}/like`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Usuario autenticado
+
+#### Parámetros
+
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                     |
+| :---------- | :-------- | :--- | :-------- | :---------------------------------------------- |
+| `messageId` | Path      | UUID | Sí        | Identificador único del mensaje a calificar.    |
+
+#### Respuestas
+
+- **`200 OK` (Mensaje Calificado Exitosamente):**
+  ```json
+  {
+    "id": "d1a63cde-f1b2-4d2c-8ab5-f12b2a75908e",
+    "role": "MODEL",
+    "content": "La luz de alarma roja del monitor indica un fallo de alimentación...",
+    "imageBase64": null,
+    "imageMimeType": null,
+    "sources": [
+      {
+        "documentName": "monitor_multiparametrico.pdf",
+        "chunkIndex": 3,
+        "snippet": "En caso de fallo de alimentación, el LED rojo parpadeará alternamente..."
+      }
+    ],
+    "createdAt": "2026-07-06T10:06:15",
+    "liked": true
+  }
+  ```
+
+- **`400 Bad Request` (Mensaje no encontrado, no pertenece al usuario, o no es un mensaje de la IA):**
+  Retorna un cuerpo vacío con el estado `400`.
+
+---
+
+### 4.8 Reaccionar con Dislike a un Mensaje
+
+Registra una calificación negativa (`liked` = `false`) para un mensaje específico. Valida que el mensaje exista, pertenezca a una sesión del usuario autenticado, y que haya sido generado por la IA (rol `MODEL`).
+
+- **URL:** `/api/chat/messages/{messageId}/dislike`
+- **Método HTTP:** `POST`
+- **Rol requerido:** Usuario autenticado
+
+#### Parámetros
+
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                     |
+| :---------- | :-------- | :--- | :-------- | :---------------------------------------------- |
+| `messageId` | Path      | UUID | Sí        | Identificador único del mensaje a calificar.    |
+
+#### Respuestas
+
+- **`200 OK` (Mensaje Calificado Exitosamente):**
+  ```json
+  {
+    "id": "d1a63cde-f1b2-4d2c-8ab5-f12b2a75908e",
+    "role": "MODEL",
+    "content": "La luz de alarma roja del monitor indica un fallo de alimentación...",
+    "imageBase64": null,
+    "imageMimeType": null,
+    "sources": [
+      {
+        "documentName": "monitor_multiparametrico.pdf",
+        "chunkIndex": 3,
+        "snippet": "En caso de fallo de alimentación, el LED rojo parpadeará alternamente..."
+      }
+    ],
+    "createdAt": "2026-07-06T10:06:15",
+    "liked": false
+  }
+  ```
+
+- **`400 Bad Request` (Mensaje no encontrado, no pertenece al usuario, o no es un mensaje de la IA):**
+  Retorna un cuerpo vacío con el estado `400`.
 
 ---
 
