@@ -1253,7 +1253,7 @@ Cierra y marca una sesión de soporte como resuelta. Esta acción envía automá
 
 - **URL:** `/api/support/sessions/{sessionId}/close`
 - **Método HTTP:** `POST`
-- **Rol requerido:** Usuario autenticado (`CLIENT` o técnico asignado)
+- **Rol requerido:** Técnico asignado (`TECHNICIAN`)
 
 #### Respuestas
 
@@ -1404,7 +1404,33 @@ Establece una conexión en tiempo real bidireccional para chatear.
 
 #### Protocolo de Mensajería JSON (Eventos y Respuestas)
 
-##### 5.10.1 Enviar Mensaje (Cliente)
+##### 5.10.1 Solicitar Soporte vía WebSocket (`REQUEST_SUPPORT`)
+El cliente (`CLIENT`) puede iniciar una solicitud de soporte técnico. El servidor responderá con el evento `SESSION_STATUS` de forma inmediata.
+```json
+{
+  "type": "REQUEST_SUPPORT"
+}
+```
+
+##### 5.10.2 Aceptar Soporte vía WebSocket (`ACCEPT_SUPPORT`)
+Un técnico (`TECHNICIAN`) puede aceptar y reclamar un chat de soporte en espera.
+```json
+{
+  "type": "ACCEPT_SUPPORT",
+  "sessionId": "a90df23a-f3c8-47c0-a7d5-865f04a60124"
+}
+```
+
+##### 5.10.3 Cerrar Soporte vía WebSocket (`CLOSE_SUPPORT`)
+El técnico asignado (`TECHNICIAN`) puede dar por finalizada la sesión de soporte de forma directa.
+```json
+{
+  "type": "CLOSE_SUPPORT",
+  "sessionId": "a90df23a-f3c8-47c0-a7d5-865f04a60124"
+}
+```
+
+##### 5.10.4 Enviar Mensaje (Cliente)
 Envía un mensaje a la sesión activa del cliente.
 ```json
 {
@@ -1413,7 +1439,7 @@ Envía un mensaje a la sesión activa del cliente.
 }
 ```
 
-##### 5.10.2 Enviar Mensaje (Técnico)
+##### 5.10.5 Enviar Mensaje (Técnico)
 Envía un mensaje indicando el `sessionId`.
 ```json
 {
@@ -1423,7 +1449,7 @@ Envía un mensaje indicando el `sessionId`.
 }
 ```
 
-##### 5.10.3 Mensaje Recibido (Ambas Partes)
+##### 5.10.6 Mensaje Recibido (Ambas Partes)
 El servidor reenvía el mensaje en tiempo real con este formato:
 ```json
 {
@@ -1437,8 +1463,29 @@ El servidor reenvía el mensaje en tiempo real con este formato:
 }
 ```
 
-##### 5.10.4 Notificación de Cierre de Sesión (`SESSION_CLOSED`)
-El servidor avisa que el chat fue cerrado por la otra parte o API REST.
+##### 5.10.7 Alerta de Estado de la Sesión (`SESSION_STATUS`)
+Notificación enviada al cliente confirmando el estado actual de su solicitud de soporte.
+```json
+{
+  "type": "SESSION_STATUS",
+  "sessionId": "UUID_DE_LA_SESION",
+  "status": "WAITING" // o "ACTIVE", "RESOLVED"
+}
+```
+
+##### 5.10.8 Alerta de Sesión Aceptada/Asignada (`SESSION_ACCEPTED`)
+Enviada tanto al cliente como al técnico en tiempo real cuando un técnico acepta la sesión de soporte:
+```json
+{
+  "type": "SESSION_ACCEPTED",
+  "sessionId": "UUID_DE_LA_SESION",
+  "supportId": "UUID_DEL_TECNICO",
+  "supportName": "Nombre del Técnico"
+}
+```
+
+##### 5.10.9 Notificación de Cierre de Sesión (`SESSION_CLOSED`)
+El servidor avisa que la sesión fue cerrada de forma definitiva.
 ```json
 {
   "type": "SESSION_CLOSED",
@@ -1446,7 +1493,7 @@ El servidor avisa que el chat fue cerrado por la otra parte o API REST.
 }
 ```
 
-##### 5.10.5 Respuestas Automáticas del Sistema (`SYSTEM_MESSAGE`)
+##### 5.10.10 Respuestas Automáticas del Sistema (`SYSTEM_MESSAGE`)
 Mensajes generados de forma automática por el backend para notificar eventos clave al cliente:
 * **Si el cliente escribe en estado de espera (`WAITING`):**
   ```json
@@ -1467,7 +1514,7 @@ Mensajes generados de forma automática por el backend para notificar eventos cl
   }
   ```
 
-##### 5.10.6 Alerta de Nueva Solicitud en Espera (`NEW_WAITING_SESSION`)
+##### 5.10.11 Alerta de Nueva Solicitud en Espera (`NEW_WAITING_SESSION`)
 El servidor avisa a todos los técnicos en tiempo real que un cliente acaba de solicitar soporte técnico y se encuentra esperando un técnico asignado, adjuntando el resumen generado.
 ```json
 {
@@ -1479,7 +1526,7 @@ El servidor avisa a todos los técnicos en tiempo real que un cliente acaba de s
 }
 ```
 
-##### 5.10.7 Alerta de Sesión Reclamada (`SESSION_CLAIMED`)
+##### 5.10.12 Alerta de Sesión Reclamada (`SESSION_CLAIMED`)
 El servidor avisa a todos los técnicos que una sesión de la lista de espera ya fue reclamada y debe removerse de la bandeja.
 ```json
 {
@@ -1488,7 +1535,7 @@ El servidor avisa a todos los técnicos que una sesión de la lista de espera ya
 }
 ```
 
-##### 5.10.8 Mensaje de Error
+##### 5.10.13 Mensaje de Error
 El servidor responde con este formato en caso de infracciones (como chatear sin una sesión activa o sobre una sesión cerrada).
 ```json
 {
