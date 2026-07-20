@@ -776,6 +776,9 @@ Realiza una consulta al chatbot fundamentada en los manuales cargados. Soporta c
 
 Todos estos endpoints requieren que el usuario esté autenticado. El sistema extraerá el ID del usuario directamente desde el token JWT (cookie `token` o cabecera `Authorization`).
 
+> [!NOTE]
+> **Control de Inactividad Automático (Chat de IA):** Las sesiones de chat abiertas (`isClosed = false`) son monitoreadas constantemente en segundo plano. Si el usuario no realiza ninguna consulta en **15 minutos** (configurable mediante `inactivity.prompt.seconds`), el chatbot insertará automáticamente en el historial un mensaje recordatorio del modelo: *¿Sigues ahí o pudiste solucionar el problema?*. Si transcurren **15 minutos** adicionales (configurable mediante `inactivity.close.seconds`) sin mensajes del usuario, la sesión se cerrará de forma automática. Cualquier interacción posterior del usuario antes del cierre reinicia ambos temporizadores a cero.
+
 ### 4.1 Crear Sesión de Chat
 
 Crea una nueva conversación para el usuario autenticado.
@@ -1113,6 +1116,9 @@ Registra una calificación negativa (`liked` = `false`) para un mensaje específ
 ## 5. Soporte Técnico en Vivo y WebSockets
 
 Esta sección describe la API REST y la especificación de comunicación en tiempo real (WebSockets) para el chat de soporte técnico directo entre clientes y técnicos (empleados), y el acceso a transcripciones para administradores.
+
+> [!NOTE]
+> **Control de Inactividad Automático (Soporte en Vivo):** Las sesiones de soporte en estado **`ACTIVE`** (con un técnico asignado) se monitorean continuamente. Si el usuario no envía ningún mensaje en **15 minutos** (configurable mediante `inactivity.prompt.seconds`), el sistema registrará e insertará un mensaje recordatorio del emisor tipo **`SYSTEM`** en el historial: *¿Sigues ahí o pudiste solucionar el problema?*, notificándolo vía WebSockets a ambas partes. Si transcurren **15 minutos** adicionales (configurable mediante `inactivity.close.seconds`) sin respuesta del usuario común, la sesión de soporte se dará por resuelta y finalizará automáticamente (`status = RESOLVED`, `closedAt = timestamp`). Cualquier mensaje nuevo del cliente reinicia ambos temporizadores a cero.
 
 ### 5.1 Solicitar Soporte Técnico (Cliente)
 
@@ -1457,7 +1463,7 @@ El servidor reenvía el mensaje en tiempo real con este formato:
   "id": "UUID_DEL_MENSAJE",
   "sessionId": "UUID_DE_LA_SESION",
   "senderId": "UUID_DEL_EMISOR",
-  "senderType": "USER", // o "TECHNICIAN"
+  "senderType": "USER", // o "TECHNICIAN" o "SYSTEM" (para recordatorios automáticos de inactividad)
   "content": "Contenido del mensaje",
   "createdAt": "2026-07-07T11:33:10"
 }
@@ -1511,6 +1517,15 @@ Mensajes generados de forma automática por el backend para notificar eventos cl
     "sessionId": "UUID_DE_LA_SESION",
     "content": "Su sesión de soporte ha sido finalizada.",
     "createdAt": "2026-07-07T11:35:10"
+  }
+  ```
+* **Si se cierra la sesión de soporte por inactividad:**
+  ```json
+  {
+    "type": "SYSTEM_MESSAGE",
+    "sessionId": "UUID_DE_LA_SESION",
+    "content": "La sesión de soporte ha sido cerrada automáticamente por inactividad.",
+    "createdAt": "2026-07-20T11:21:40"
   }
   ```
 
