@@ -41,6 +41,12 @@ public class SupportSession {
 
     @Column(name = "summary", columnDefinition = "TEXT")
     private String summary;
+
+    @Column(name = "prompt_sent", nullable = false)
+    private Boolean promptSent = false;
+
+    @Column(name = "last_user_activity")
+    private LocalDateTime lastUserActivity = LocalDateTime.now();
     
     //GETTERS AND SETTERS
 
@@ -128,5 +134,21 @@ public class SupportSession {
 
     public void setSummary(String summary) {
         this.summary = summary;
+    }
+
+    public Boolean getPromptSent() {
+        return promptSent;
+    }
+
+    public void setPromptSent(Boolean promptSent) {
+        this.promptSent = promptSent;
+    }
+
+    public LocalDateTime getLastUserActivity() {
+        return lastUserActivity;
+    }
+
+    public void setLastUserActivity(LocalDateTime lastUserActivity) {
+        this.lastUserActivity = lastUserActivity;
     }
 }

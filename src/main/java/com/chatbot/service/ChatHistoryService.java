@@ -121,6 +121,11 @@ public class ChatHistoryService {
             throw new IllegalStateException("No se pueden enviar mensajes a una sesión de chat cerrada.");
         }
 
+        // Actualizar actividad del usuario y reiniciar estado de prompt_sent
+        session.setLastUserActivity(LocalDateTime.now());
+        session.setPromptSent(false);
+        sessionRepository.save(session);
+
         // A. Obtener el historial de los últimos 5 mensajes previos de la sesión
         List<ChatMessage> previousMessages = messageRepository.findTop5BySessionOrderByCreatedAtDesc(session);
         java.util.Collections.reverse(previousMessages);

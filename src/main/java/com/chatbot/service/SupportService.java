@@ -161,6 +161,12 @@ public class SupportService {
         message.setContent(content);
         message.setCreatedAt(LocalDateTime.now());
 
+        if (senderType == SenderType.USER) {
+            session.setLastUserActivity(LocalDateTime.now());
+            session.setPromptSent(false);
+            supportSessionRepository.save(session);
+        }
+
         return messageRepository.save(message);
     }
 

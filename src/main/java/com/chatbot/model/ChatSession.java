@@ -38,6 +38,12 @@ public class ChatSession {
     @Column(name = "closed_at")
     private LocalDateTime closedAt;
 
+    @Column(name = "prompt_sent", nullable = false)
+    private Boolean promptSent = false;
+
+    @Column(name = "last_user_activity")
+    private LocalDateTime lastUserActivity = LocalDateTime.now();
+
     public ChatSession() {
     }
 
@@ -114,5 +120,21 @@ public class ChatSession {
 
     public void setClosedAt(LocalDateTime closedAt) {
         this.closedAt = closedAt;
+    }
+
+    public Boolean getPromptSent() {
+        return promptSent;
+    }
+
+    public void setPromptSent(Boolean promptSent) {
+        this.promptSent = promptSent;
+    }
+
+    public LocalDateTime getLastUserActivity() {
+        return lastUserActivity;
+    }
+
+    public void setLastUserActivity(LocalDateTime lastUserActivity) {
+        this.lastUserActivity = lastUserActivity;
     }
 }
