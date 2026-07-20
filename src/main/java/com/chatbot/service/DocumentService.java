@@ -74,6 +74,20 @@ public class DocumentService {
         documentRepository.deleteById(id);
     }
 
+    @Transactional
+    public Document enableDocument(UUID id) {
+        Document document = getDocumentById(id);
+        document.setEnabled(true);
+        return documentRepository.save(document);
+    }
+
+    @Transactional
+    public Document disableDocument(UUID id) {
+        Document document = getDocumentById(id);
+        document.setEnabled(false);
+        return documentRepository.save(document);
+    }
+
     /**
      * Remueve tildes, diacríticos y caracteres especiales para cumplir con las reglas 
      * de nombrado de claves S3 de Supabase Storage.

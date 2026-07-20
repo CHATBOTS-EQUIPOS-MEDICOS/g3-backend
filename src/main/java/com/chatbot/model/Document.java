@@ -38,6 +38,10 @@ public class Document {
     @Column(name = "storage_path")
     private String storagePath;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean enabled = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

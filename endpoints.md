@@ -708,6 +708,77 @@ Elimina el registro de un manual del sistema, liberando también los recursos re
 
 ---
 
+### 2.5 Habilitar Documento
+
+Cambia el estado de un documento a habilitado (`enabled = true`), de manera que sus fragmentos se vuelvan a utilizar en las búsquedas semánticas del chatbot.
+
+- **URL:** `/api/documents/{id}/enable`
+- **Método HTTP:** `POST`
+- **Rol requerido:** `ADMIN`
+
+#### Parámetros
+
+| Parámetro | Ubicación | Tipo | Requerido | Descripción                                     |
+| :-------- | :-------- | :--- | :-------- | :---------------------------------------------- |
+| `id`      | Path      | UUID | Sí        | Identificador único del documento a habilitar.  |
+
+#### Respuestas
+
+- **`200 OK`:**
+  Retorna el objeto documento actualizado con `enabled: true`.
+
+  ```json
+  {
+    "id": "e837f694-df7a-4c28-97e0-911a7a0de3d4",
+    "name": "manual_respirador_model_x.pdf",
+    "contentType": "application/pdf",
+    "sizeBytes": 1048576,
+    "status": "COMPLETED",
+    "storagePath": "documents/e837f694-df7a-4c28-97e0-911a7a0de3d4_manual_respirador_model_x.pdf",
+    "enabled": true,
+    "createdAt": "2026-07-03T17:15:30.123",
+    "updatedAt": "2026-07-20T12:05:00"
+  }
+  ```
+
+---
+
+### 2.6 Deshabilitar Documento
+
+Cambia el estado de un documento a deshabilitado (`enabled = false`), impidiendo que el chatbot utilice la información de este documento para responder a las consultas.
+
+- **URL:** `/api/documents/{id}/disable`
+- **Método HTTP:** `POST`
+- **Rol requerido:** `ADMIN`
+
+#### Parámetros
+
+| Parámetro | Ubicación | Tipo | Requerido | Descripción                                        |
+| :-------- | :-------- | :--- | :-------- | :------------------------------------------------- |
+| `id`      | Path      | UUID | Sí        | Identificador único del documento a deshabilitar.  |
+
+#### Respuestas
+
+- **`200 OK`:**
+  Retorna el objeto documento actualizado con `enabled: false`.
+
+  ```json
+  {
+    "id": "e837f694-df7a-4c28-97e0-911a7a0de3d4",
+    "name": "manual_respirador_model_x.pdf",
+    "contentType": "application/pdf",
+    "sizeBytes": 1048576,
+    "status": "COMPLETED",
+    "storagePath": "documents/e837f694-df7a-4c28-97e0-911a7a0de3d4_manual_respirador_model_x.pdf",
+    "enabled": false,
+    "createdAt": "2026-07-03T17:15:30.123",
+    "updatedAt": "2026-07-20T12:05:00"
+  }
+  ```
+
+---
+
+
 ## 3. Consultar al Chatbot (Estilo RAG)
 
 ### 3.1 Consultar al Chatbot
