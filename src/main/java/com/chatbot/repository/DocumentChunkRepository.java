@@ -104,9 +104,13 @@ public class DocumentChunkRepository {
         try {
             String embeddingJson = objectMapper.writeValueAsString(queryEmbedding);
             String sql = """
-                    SELECT id, content, metadata, embedding
-                    FROM document_chunks
-                    ORDER BY embedding <=> CAST(? AS vector)
+                    SELECT dc.id, dc.content, dc.metadata, dc.embedding
+                    FROM document_chunks dc
+                    LEFT JOIN documents d ON (dc.metadata->>'document_id') IS NOT NULL 
+                                         AND dc.metadata->>'document_id' ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' 
+                                         AND CAST(dc.metadata->>'document_id' AS UUID) = d.id
+                    WHERE dc.metadata->>'document_id' IS NULL OR d.enabled = TRUE
+                    ORDER BY dc.embedding <=> CAST(? AS vector)
                     LIMIT ?
                     """;
             return jdbcTemplate.query(sql, (rs, rowNum) -> mapRowToChunk(rs), embeddingJson, limit);

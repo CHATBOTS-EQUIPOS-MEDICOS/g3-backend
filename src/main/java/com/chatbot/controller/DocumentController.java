@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -77,5 +78,19 @@ public class DocumentController {
     public ResponseEntity<Void> deleteDocument(@PathVariable UUID id) {
         documentService.deleteDocument(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/enable")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Document> enableDocument(@PathVariable UUID id) {
+        Document document = documentService.enableDocument(id);
+        return ResponseEntity.ok(document);
+    }
+
+    @PostMapping("/{id}/disable")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Document> disableDocument(@PathVariable UUID id) {
+        Document document = documentService.disableDocument(id);
+        return ResponseEntity.ok(document);
     }
 }
