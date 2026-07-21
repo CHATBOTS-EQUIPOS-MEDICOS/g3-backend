@@ -1253,6 +1253,68 @@ Permite a los administradores obtener un resumen de métricas del chatbot (satis
 
 ---
 
+### 4.10 [ADMIN] Obtener Métricas de Técnicos
+
+Permite a los administradores obtener las métricas de desempeño de los técnicos, la cantidad de técnicos totales/activos/inactivos y la cantidad de chats de soporte creados semanalmente en las últimas 12 semanas.
+
+- **URL:** `/api/admin/technician/metrics`
+- **Método HTTP:** `GET`
+- **Rol requerido:** `ADMIN`
+
+#### Respuestas
+
+- **`200 OK` (Consulta Exitosa):**
+
+  ```json
+  {
+    "technicianCounts": {
+      "total": 5,
+      "active": 3,
+      "inactive": 2
+    },
+    "conversationsPerTechnician": [
+      {
+        "technicianId": "bd848125-23df-4bc9-9c64-97880e278d91",
+        "fullName": "Mauricio Heredia",
+        "email": "maurih46322945@gmail.com",
+        "conversationCount": 15
+      },
+      {
+        "technicianId": "a7b3c2d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+        "fullName": "Antonella Lezcano",
+        "email": "lezcanoantonella85@gmail.com",
+        "conversationCount": 24
+      }
+    ],
+    "weeklySupportChats": [
+      {
+        "weekStartDate": "2026-05-04",
+        "chatCount": 0
+      },
+      {
+        "weekStartDate": "2026-05-11",
+        "chatCount": 2
+      },
+      {
+        "weekStartDate": "2026-05-18",
+        "chatCount": 5
+      },
+      {
+        "weekStartDate": "2026-07-20",
+        "chatCount": 10
+      }
+    ]
+  }
+  ```
+
+- **`401 Unauthorized` (Usuario no autenticado):**
+  Retorna un cuerpo vacío con el estado `401`.
+
+- **`403 Forbidden` (Usuario autenticado pero sin rol ADMIN):**
+  Retorna un cuerpo vacío con el estado `403`.
+
+---
+
 ## 5. Soporte Técnico en Vivo y WebSockets
 
 Esta sección describe la API REST y la especificación de comunicación en tiempo real (WebSockets) para el chat de soporte técnico directo entre clientes y técnicos (empleados), y el acceso a transcripciones para administradores.
