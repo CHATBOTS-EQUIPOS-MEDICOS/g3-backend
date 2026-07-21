@@ -13,7 +13,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final SupportWebSocketHandler supportWebSocketHandler;
     private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
 
-    public WebSocketConfig(SupportWebSocketHandler supportWebSocketHandler, JwtHandshakeInterceptor jwtHandshakeInterceptor) {
+    public WebSocketConfig(SupportWebSocketHandler supportWebSocketHandler,
+            JwtHandshakeInterceptor jwtHandshakeInterceptor) {
         this.supportWebSocketHandler = supportWebSocketHandler;
         this.jwtHandshakeInterceptor = jwtHandshakeInterceptor;
     }
@@ -22,6 +23,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(supportWebSocketHandler, "/ws/support")
                 .addInterceptors(jwtHandshakeInterceptor)
-                .setAllowedOrigins("*");
+                .setAllowedOrigins("http://localhost:4200");
     }
 }
