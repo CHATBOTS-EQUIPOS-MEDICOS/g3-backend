@@ -44,6 +44,12 @@ public class ChatSession {
     @Column(name = "last_user_activity")
     private LocalDateTime lastUserActivity = LocalDateTime.now();
 
+    @Column(name = "feedback_useful")
+    private Boolean feedbackUseful;
+
+    @Column(name = "feedback_comment", columnDefinition = "TEXT")
+    private String feedbackComment;
+
     public ChatSession() {
     }
 
@@ -136,5 +142,21 @@ public class ChatSession {
 
     public void setLastUserActivity(LocalDateTime lastUserActivity) {
         this.lastUserActivity = lastUserActivity;
+    }
+
+    public Boolean getFeedbackUseful() {
+        return feedbackUseful;
+    }
+
+    public void setFeedbackUseful(Boolean feedbackUseful) {
+        this.feedbackUseful = feedbackUseful;
+    }
+
+    public String getFeedbackComment() {
+        return feedbackComment;
+    }
+
+    public void setFeedbackComment(String feedbackComment) {
+        this.feedbackComment = feedbackComment;
     }
 }

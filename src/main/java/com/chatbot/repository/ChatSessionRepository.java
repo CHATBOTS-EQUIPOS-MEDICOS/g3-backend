@@ -2,6 +2,7 @@ package com.chatbot.repository;
 
 import com.chatbot.model.ChatSession;
 import com.chatbot.model.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,4 +16,8 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> 
     Optional<ChatSession> findFirstByUserOrderByUpdatedAtDesc(User user);
     Optional<ChatSession> findByIdAndUser(UUID id, User user);
     List<ChatSession> findByIsClosedFalse();
+
+    long countByFeedbackUsefulIsNotNull();
+    long countByFeedbackUseful(Boolean feedbackUseful);
+    List<ChatSession> findByFeedbackUsefulIsNotNullOrderByClosedAtDesc(Pageable pageable);
 }

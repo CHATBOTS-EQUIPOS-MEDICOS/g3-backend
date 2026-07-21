@@ -121,4 +121,47 @@ class ChatHistoryServiceTest {
                 .hasMessageContaining("Solo se pueden calificar los mensajes de la IA.");
         verify(messageRepository, never()).save(any());
     }
+
+    @Test
+    void submitFeedback_ShouldSaveFeedbackAndCloseSession_WhenSessionBelongsToUser() {
+        // Arrange
+        UUID sessionId = UUID.randomUUID();
+        ChatSession session = new ChatSession();
+        session.setId(sessionId);
+        session.setUser(user);
+        session.setIsClosed(false);
+
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(sessionRepository.findByIdAndUser(sessionId, user)).thenReturn(Optional.of(session));
+        when(sessionRepository.save(any(ChatSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ChatSession updatedSession = chatHistoryService.submitFeedback(user.getId(), sessionId, true, "Excelente bot");
+
+        // Assert
+        assertThat(updatedSession.getFeedbackUseful()).isTrue();
+        assertThat(updatedSession.getFeedbackComment()).isEqualTo("Excelente bot");
+        assertThat(updatedSession.getIsClosed()).isTrue();
+        assertThat(updatedSession.getClosedAt()).isNotNull();
+        verify(sessionRepository).save(session);
+    }
+
+    @Test
+    void submitFeedback_ShouldThrowException_WhenSessionHasAlreadyBeenRated() {
+        // Arrange
+        UUID sessionId = UUID.randomUUID();
+        ChatSession session = new ChatSession();
+        session.setId(sessionId);
+        session.setUser(user);
+        session.setFeedbackUseful(true); // Ya calificado
+
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(sessionRepository.findByIdAndUser(sessionId, user)).thenReturn(Optional.of(session));
+
+        // Act & Assert
+        assertThatThrownBy(() -> chatHistoryService.submitFeedback(user.getId(), sessionId, false, "Intento modificar"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("La sesión de chat ya ha sido calificada.");
+        verify(sessionRepository, never()).save(any());
+    }
 }

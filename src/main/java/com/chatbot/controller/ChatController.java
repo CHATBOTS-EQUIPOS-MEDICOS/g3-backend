@@ -6,6 +6,8 @@ import com.chatbot.model.ChatSource;
 import com.chatbot.service.ChatHistoryService;
 import com.chatbot.service.ChatService;
 import com.chatbot.service.ChatService.ChatAnswer;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -49,7 +51,9 @@ public class ChatController {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             Boolean isClosed,
-            LocalDateTime closedAt) {
+            LocalDateTime closedAt,
+            Boolean feedbackUseful,
+            String feedbackComment) {
         public static ChatSessionResponse fromEntity(ChatSession session) {
             return new ChatSessionResponse(
                     session.getId(),
@@ -57,8 +61,15 @@ public class ChatController {
                     session.getCreatedAt(),
                     session.getUpdatedAt(),
                     session.getIsClosed(),
-                    session.getClosedAt());
+                    session.getClosedAt(),
+                    session.getFeedbackUseful(),
+                    session.getFeedbackComment());
         }
+    }
+
+    public record FeedbackRequest(
+            Boolean useful,
+            String comment) {
     }
 
     public record ChatMessageResponse(
@@ -269,6 +280,28 @@ public class ChatController {
             return ResponseEntity.ok(ChatMessageResponse.fromEntity(message));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Registra la calificación (feedback) para una sesión completa del chatbot.
+     */
+    @PostMapping("/sessions/{sessionId}/feedback")
+    public ResponseEntity<?> submitFeedback(
+            @PathVariable UUID sessionId,
+            @Valid @RequestBody FeedbackRequest request
+    ) {
+        UUID userId = getAuthenticatedUserId();
+        try {
+            ChatSession session = chatHistoryService.submitFeedback(
+                    userId,
+                    sessionId,
+                    request.useful(),
+                    request.comment()
+            );
+            return ResponseEntity.ok(ChatSessionResponse.fromEntity(session));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }

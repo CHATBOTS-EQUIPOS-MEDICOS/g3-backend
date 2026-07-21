@@ -257,4 +257,31 @@ public class ChatHistoryService {
         message.setLiked(liked);
         return messageRepository.save(message);
     }
+
+    /**
+     * Registra el feedback de la sesión completa del chatbot.
+     * Si la sesión no está cerrada, se marca automáticamente como cerrada.
+     */
+    @Transactional
+    public ChatSession submitFeedback(UUID userId, UUID sessionId, Boolean useful, String comment) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
+
+        ChatSession session = sessionRepository.findByIdAndUser(sessionId, user)
+                .orElseThrow(() -> new IllegalArgumentException("Sesión de chat no encontrada o no pertenece al usuario."));
+
+        if (session.getFeedbackUseful() != null) {
+            throw new IllegalArgumentException("La sesión de chat ya ha sido calificada.");
+        }
+
+        session.setFeedbackUseful(useful);
+        session.setFeedbackComment(comment);
+
+        if (Boolean.FALSE.equals(session.getIsClosed()) || session.getIsClosed() == null) {
+            session.setIsClosed(true);
+            session.setClosedAt(LocalDateTime.now());
+        }
+
+        return sessionRepository.save(session);
+    }
 }
