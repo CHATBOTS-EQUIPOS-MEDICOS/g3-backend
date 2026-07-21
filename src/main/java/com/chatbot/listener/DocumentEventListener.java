@@ -8,10 +8,13 @@ import com.chatbot.service.DocumentProcessingService;
 import com.chatbot.service.SupabaseStorageService;
 import com.chatbot.service.VectorStoreService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,7 +38,7 @@ public class DocumentEventListener {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener
     public void handleDocumentIngested(DocumentIngestedEvent event) {
         UUID docId = event.getDocumentId();
         log.info("Iniciando procesamiento asíncrono del documento ID: {}", docId);
@@ -59,15 +62,40 @@ public class DocumentEventListener {
             documentRepository.save(document);
             log.info("Procesamiento de documento ID: {} finalizado con éxito.", docId);
 
-        } catch (Exception e) {
-            log.error("Error procesando asíncronamente el documento ID: {}", docId, e);
+        } catch (Throwable t) {
+            log.error("Error o excepción grave procesando asíncronamente el documento ID: {}", docId, t);
             document.setStatus("FAILED");
             documentRepository.save(document);
+            if (t instanceof Error) {
+                throw (Error) t;
+            } else if (t instanceof RuntimeException) {
+                throw (RuntimeException) t;
+            } else {
+                throw new RuntimeException(t);
+            }
+        }
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void resetProcessingDocuments() {
+        log.info("Buscando documentos en estado PROCESSING para resetearlos a FAILED debido a posible reinicio/apagado del servidor...");
+        try {
+            List<Document> processingDocs = documentRepository.findByStatus("PROCESSING");
+            if (!processingDocs.isEmpty()) {
+                for (Document doc : processingDocs) {
+                    log.info("Actualizando documento ID {} ({}) de PROCESSING a FAILED", doc.getId(), doc.getName());
+                    doc.setStatus("FAILED");
+                }
+                documentRepository.saveAll(processingDocs);
+                log.info("Reseteados {} documentos a estado FAILED.", processingDocs.size());
+            }
+        } catch (Exception e) {
+            log.error("Error al resetear documentos en estado PROCESSING en el arranque", e);
         }
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener
     public void handleDocumentDeleted(DocumentDeletedEvent event) {
         UUID docId = event.getDocumentId();
         String storagePath = event.getStoragePath();

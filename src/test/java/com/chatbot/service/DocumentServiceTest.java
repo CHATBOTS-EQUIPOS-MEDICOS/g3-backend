@@ -84,4 +84,19 @@ class DocumentServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Documento no encontrado con ID: " + docId);
     }
+
+    @Test
+    void uploadDocument_LimitExceeded_ShouldThrowException() {
+        // Arrange
+        when(documentRepository.countByStatus("PROCESSING")).thenReturn(3L);
+
+        // Act & Assert
+        assertThatThrownBy(() -> documentService.uploadDocument("new_manual.pdf", "application/pdf", new byte[10]))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Ya hay 3 documentos procesándose en este momento. Por favor, espere a que finalicen.");
+
+        verify(supabaseStorageService, never()).uploadFile(anyString(), any(), anyString());
+        verify(documentRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
 }

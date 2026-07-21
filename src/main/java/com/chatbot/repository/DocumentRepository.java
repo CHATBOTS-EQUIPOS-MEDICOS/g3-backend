@@ -11,4 +11,8 @@ import java.util.UUID;
 public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     List<Document> findAllByOrderByCreatedAtDesc();
+
+    List<Document> findByStatus(String status);
+
+    long countByStatus(String status);
 }
