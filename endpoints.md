@@ -140,7 +140,6 @@ Invalida la sesión del usuario eliminando la cookie de autenticación.
     }
     ```
 
-
 ---
 
 ### 1.4 Obtener Perfil del Usuario Logueado
@@ -154,6 +153,7 @@ Obtiene la información del perfil del usuario autenticado actualmente a partir 
 #### Respuestas
 
 - **`200 OK` (Consulta Exitosa):**
+
   ```json
   {
     "email": "juan.perez@example.com",
@@ -163,6 +163,7 @@ Obtiene la información del perfil del usuario autenticado actualmente a partir 
   ```
 
 - **`400 Bad Request` (Usuario desactivado o no encontrado):**
+
   ```json
   {
     "error": "El usuario está desactivado."
@@ -185,13 +186,14 @@ Permite al usuario autenticado actualizar su nombre completo y/o su contraseña.
 
 #### Cuerpo de la Petición (JSON)
 
-| Campo         | Tipo   | Requerido | Descripción                                                                                           |
-| :------------ | :----- | :-------- | :---------------------------------------------------------------------------------------------------- |
-| `fullName`    | String | No        | Nuevo nombre completo del usuario (entre 3 y 100 caracteres).                                         |
-| `oldPassword` | String | No        | Contraseña actual (requerida únicamente si se incluye `newPassword`).                                 |
-| `newPassword` | String | No        | Nueva contraseña (entre 6 y 50 caracteres, debe incluir al menos un número, una mayúscula y minúscula).|
+| Campo         | Tipo   | Requerido | Descripción                                                                                             |
+| :------------ | :----- | :-------- | :------------------------------------------------------------------------------------------------------ |
+| `fullName`    | String | No        | Nuevo nombre completo del usuario (entre 3 y 100 caracteres).                                           |
+| `oldPassword` | String | No        | Contraseña actual (requerida únicamente si se incluye `newPassword`).                                   |
+| `newPassword` | String | No        | Nueva contraseña (entre 6 y 50 caracteres, debe incluir al menos un número, una mayúscula y minúscula). |
 
 ##### Ejemplo de Cuerpo de Petición (Actualizar Nombre)
+
 ```json
 {
   "fullName": "Juan Carlos Pérez"
@@ -199,6 +201,7 @@ Permite al usuario autenticado actualizar su nombre completo y/o su contraseña.
 ```
 
 ##### Ejemplo de Cuerpo de Petición (Actualizar Contraseña)
+
 ```json
 {
   "oldPassword": "securePassword123",
@@ -209,6 +212,7 @@ Permite al usuario autenticado actualizar su nombre completo y/o su contraseña.
 #### Respuestas
 
 - **`200 OK` (Actualización Exitosa):**
+
   ```json
   {
     "email": "juan.perez@example.com",
@@ -244,6 +248,7 @@ Desactiva la cuenta del usuario autenticado (baja lógica). Cambia su estado a i
 #### Respuestas
 
 - **`200 OK` (Desactivación Exitosa):**
+
   ```json
   {
     "message": "Cuenta desactivada exitosamente."
@@ -270,11 +275,12 @@ Permite al usuario solicitar un código OTP para recuperar su contraseña. Enví
 
 #### Cuerpo de la Petición (JSON)
 
-| Campo | Tipo | Requerido | Descripción |
-| :--- | :--- | :--- | :--- |
-| `email` | String | Sí | Correo electrónico del usuario (formato válido con `@` y `.`). |
+| Campo   | Tipo   | Requerido | Descripción                                                    |
+| :------ | :----- | :-------- | :------------------------------------------------------------- |
+| `email` | String | Sí        | Correo electrónico del usuario (formato válido con `@` y `.`). |
 
 ##### Ejemplo de Cuerpo de Petición
+
 ```json
 {
   "email": "juan.perez@example.com"
@@ -284,6 +290,7 @@ Permite al usuario solicitar un código OTP para recuperar su contraseña. Enví
 #### Respuestas
 
 - **`200 OK` (Solicitud Procesada):**
+
   ```json
   {
     "message": "Código de recuperación enviado al correo electrónico."
@@ -311,12 +318,13 @@ Permite verificar que el código OTP alfanumérico enviado por correo sea correc
 
 #### Cuerpo de la Petición (JSON)
 
-| Campo | Tipo | Requerido | Descripción |
-| :--- | :--- | :--- | :--- |
-| `email` | String | Sí | Correo electrónico del usuario. |
-| `code` | String | Sí | Código OTP de 6 caracteres alfanuméricos (no es sensible a mayúsculas/minúsculas). |
+| Campo   | Tipo   | Requerido | Descripción                                                                        |
+| :------ | :----- | :-------- | :--------------------------------------------------------------------------------- |
+| `email` | String | Sí        | Correo electrónico del usuario.                                                    |
+| `code`  | String | Sí        | Código OTP de 6 caracteres alfanuméricos (no es sensible a mayúsculas/minúsculas). |
 
 ##### Ejemplo de Cuerpo de Petición
+
 ```json
 {
   "email": "juan.perez@example.com",
@@ -327,6 +335,7 @@ Permite verificar que el código OTP alfanumérico enviado por correo sea correc
 #### Respuestas
 
 - **`200 OK` (Código Verificado):**
+
   ```json
   {
     "resetToken": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
@@ -354,12 +363,13 @@ Permite al usuario cambiar su contraseña utilizando el `resetToken` obtenido en
 
 #### Cuerpo de la Petición (JSON)
 
-| Campo | Tipo | Requerido | Descripción |
-| :--- | :--- | :--- | :--- |
-| `resetToken` | String (UUID) | Sí | Token obtenido de la validación del código. |
-| `newPassword` | String | Sí | Nueva contraseña (entre 6 y 50 caracteres, con números, mayúsculas y minúsculas). |
+| Campo         | Tipo          | Requerido | Descripción                                                                       |
+| :------------ | :------------ | :-------- | :-------------------------------------------------------------------------------- |
+| `resetToken`  | String (UUID) | Sí        | Token obtenido de la validación del código.                                       |
+| `newPassword` | String        | Sí        | Nueva contraseña (entre 6 y 50 caracteres, con números, mayúsculas y minúsculas). |
 
 ##### Ejemplo de Cuerpo de Petición
+
 ```json
 {
   "resetToken": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
@@ -370,6 +380,7 @@ Permite al usuario cambiar su contraseña utilizando el `resetToken` obtenido en
 #### Respuestas
 
 - **`200 OK` (Reinicio Exitoso):**
+
   ```json
   {
     "message": "Contraseña restablecida exitosamente."
@@ -396,6 +407,7 @@ Permite al administrador obtener la lista detallada de todos los usuarios regist
 #### Respuestas
 
 - **`200 OK` (Consulta Exitosa):**
+
   ```json
   [
     {
@@ -437,14 +449,15 @@ Permite al administrador registrar un nuevo usuario con cualquier rol en el sist
 
 #### Cuerpo de la Petición (JSON)
 
-| Campo | Tipo | Requerido | Descripción |
-| :--- | :--- | :--- | :--- |
-| `fullName` | String | Sí | Nombre completo (entre 3 y 100 caracteres). |
-| `email` | String | Sí | Correo electrónico único con formato válido (requiere `@` y `.`). |
-| `password` | String | Sí | Contraseña (entre 6 y 50 caracteres). |
-| `role` | String | Sí | Rol del usuario (`ADMIN` o `CLIENT`). |
+| Campo      | Tipo   | Requerido | Descripción                                                       |
+| :--------- | :----- | :-------- | :---------------------------------------------------------------- |
+| `fullName` | String | Sí        | Nombre completo (entre 3 y 100 caracteres).                       |
+| `email`    | String | Sí        | Correo electrónico único con formato válido (requiere `@` y `.`). |
+| `password` | String | Sí        | Contraseña (entre 6 y 50 caracteres).                             |
+| `role`     | String | Sí        | Rol del usuario (`ADMIN` o `CLIENT`).                             |
 
 ##### Ejemplo de Cuerpo de Petición
+
 ```json
 {
   "fullName": "Soporte Técnico",
@@ -457,6 +470,7 @@ Permite al administrador registrar un nuevo usuario con cualquier rol en el sist
 #### Respuestas
 
 - **`200 OK` (Creación Exitosa):**
+
   ```json
   {
     "id": "e837f694-df7a-4c28-97e0-911a7a0de3d4",
@@ -489,15 +503,16 @@ Permite al administrador actualizar la información de cualquier usuario registr
 - **Content-Type:** `application/json`
 
 #### Cuerpo de la Petición (JSON)
+
 Todos los campos son opcionales.
 
-| Campo | Tipo | Descripción |
-| :--- | :--- | :--- |
-| `fullName` | String | Nombre completo (entre 3 y 100 caracteres). |
-| `email` | String | Correo electrónico con formato válido (requiere `@` y `.`). |
-| `password` | String | Nueva contraseña (entre 6 y 50 caracteres, debe incluir al menos un número, una mayúscula y una minúscula). |
-| `role` | String | Rol del usuario (`ADMIN` o `CLIENT`). |
-| `active` | Boolean | Estado de la cuenta. |
+| Campo      | Tipo    | Descripción                                                                                                 |
+| :--------- | :------ | :---------------------------------------------------------------------------------------------------------- |
+| `fullName` | String  | Nombre completo (entre 3 y 100 caracteres).                                                                 |
+| `email`    | String  | Correo electrónico con formato válido (requiere `@` y `.`).                                                 |
+| `password` | String  | Nueva contraseña (entre 6 y 50 caracteres, debe incluir al menos un número, una mayúscula y una minúscula). |
+| `role`     | String  | Rol del usuario (`ADMIN` o `CLIENT`).                                                                       |
+| `active`   | Boolean | Estado de la cuenta.                                                                                        |
 
 > [!WARNING]
 > **Autoprotección:** Un administrador no puede degradar su propio rol (de `ADMIN` a `CLIENT`) ni desactivar su propia cuenta.
@@ -505,6 +520,7 @@ Todos los campos son opcionales.
 #### Respuestas
 
 - **`200 OK` (Actualización Exitosa):**
+
   ```json
   {
     "id": "e837f694-df7a-4c28-97e0-911a7a0de3d4",
@@ -541,6 +557,7 @@ Permite al administrador realizar la baja lógica de un usuario. Esto cambia su 
 #### Respuestas
 
 - **`200 OK` (Desactivación Exitosa):**
+
   ```json
   {
     "message": "Usuario desactivado exitosamente."
@@ -567,6 +584,7 @@ Permite al administrador reactivar un usuario anteriormente desactivado. Cambia 
 #### Respuestas
 
 - **`200 OK` (Reactivación Exitosa):**
+
   ```json
   {
     "id": "e837f694-df7a-4c28-97e0-911a7a0de3d4",
@@ -718,9 +736,9 @@ Cambia el estado de un documento a habilitado (`enabled = true`), de manera que 
 
 #### Parámetros
 
-| Parámetro | Ubicación | Tipo | Requerido | Descripción                                     |
-| :-------- | :-------- | :--- | :-------- | :---------------------------------------------- |
-| `id`      | Path      | UUID | Sí        | Identificador único del documento a habilitar.  |
+| Parámetro | Ubicación | Tipo | Requerido | Descripción                                    |
+| :-------- | :-------- | :--- | :-------- | :--------------------------------------------- |
+| `id`      | Path      | UUID | Sí        | Identificador único del documento a habilitar. |
 
 #### Respuestas
 
@@ -753,9 +771,9 @@ Cambia el estado de un documento a deshabilitado (`enabled = false`), impidiendo
 
 #### Parámetros
 
-| Parámetro | Ubicación | Tipo | Requerido | Descripción                                        |
-| :-------- | :-------- | :--- | :-------- | :------------------------------------------------- |
-| `id`      | Path      | UUID | Sí        | Identificador único del documento a deshabilitar.  |
+| Parámetro | Ubicación | Tipo | Requerido | Descripción                                       |
+| :-------- | :-------- | :--- | :-------- | :------------------------------------------------ |
+| `id`      | Path      | UUID | Sí        | Identificador único del documento a deshabilitar. |
 
 #### Respuestas
 
@@ -778,7 +796,6 @@ Cambia el estado de un documento a deshabilitado (`enabled = false`), impidiendo
 
 ---
 
-
 ## 3. Consultar al Chatbot (Estilo RAG)
 
 ### 3.1 Consultar al Chatbot
@@ -800,8 +817,9 @@ Realiza una consulta al chatbot fundamentada en los manuales cargados. Soporta c
 > \* Nota: Al menos uno de los dos campos (`question` o `file`) debe estar presente en la petición.
 
 ##### Ejemplo de Petición (Postman Form-data)
-* `question` (Text): "¿Qué significa esta luz roja en la pantalla?"
-* `file` (File): `alarma_ventilador.png` (Archivo seleccionado desde disco)
+
+- `question` (Text): "¿Qué significa esta luz roja en la pantalla?"
+- `file` (File): `alarma_ventilador.png` (Archivo seleccionado desde disco)
 
 #### Respuestas
 
@@ -848,7 +866,7 @@ Realiza una consulta al chatbot fundamentada en los manuales cargados. Soporta c
 Todos estos endpoints requieren que el usuario esté autenticado. El sistema extraerá el ID del usuario directamente desde el token JWT (cookie `token` o cabecera `Authorization`).
 
 > [!NOTE]
-> **Control de Inactividad Automático (Chat de IA):** Las sesiones de chat abiertas (`isClosed = false`) son monitoreadas constantemente en segundo plano. Si el usuario no realiza ninguna consulta en **15 minutos** (configurable mediante `inactivity.prompt.seconds`), el chatbot insertará automáticamente en el historial un mensaje recordatorio del modelo: *¿Sigues ahí o pudiste solucionar el problema?*. Si transcurren **15 minutos** adicionales (configurable mediante `inactivity.close.seconds`) sin mensajes del usuario, la sesión se cerrará de forma automática. Cualquier interacción posterior del usuario antes del cierre reinicia ambos temporizadores a cero.
+> **Control de Inactividad Automático (Chat de IA):** Las sesiones de chat abiertas (`isClosed = false`) son monitoreadas constantemente en segundo plano. Si el usuario no realiza ninguna consulta en **15 minutos** (configurable mediante `inactivity.prompt.seconds`), el chatbot insertará automáticamente en el historial un mensaje recordatorio del modelo: _¿Sigues ahí o pudiste solucionar el problema?_. Si transcurren **15 minutos** adicionales (configurable mediante `inactivity.close.seconds`) sin mensajes del usuario, la sesión se cerrará de forma automática. Cualquier interacción posterior del usuario antes del cierre reinicia ambos temporizadores a cero.
 
 ### 4.1 Crear Sesión de Chat
 
@@ -861,11 +879,12 @@ Crea una nueva conversación para el usuario autenticado.
 
 #### Cuerpo de la Petición (JSON)
 
-| Campo   | Tipo   | Requerido | Descripción                                                                           |
-| :------ | :----- | :-------- | :------------------------------------------------------------------------------------ |
+| Campo   | Tipo   | Requerido | Descripción                                                                          |
+| :------ | :----- | :-------- | :----------------------------------------------------------------------------------- |
 | `title` | String | No        | Título personalizado para el chat. Si se omite, se guarda como "Nueva Conversación". |
 
 ##### Ejemplo de Cuerpo de Petición
+
 ```json
 {
   "title": "Mantenimiento Preventivo D100"
@@ -993,20 +1012,22 @@ Si el título actual de la sesión es "Nueva Conversación", el sistema actualiz
 
 #### Cuerpo de la Petición (form-data)
 
-| Campo      | Tipo       | Requerido | Descripción                                                                              |
-| :--------- | :--------- | :-------- | :--------------------------------------------------------------------------------------- |
-| `question` | String     | No\*      | Pregunta del usuario sobre el chat.                                                      |
-| `file`     | File (Img) | No\*      | Archivo de imagen de la máquina/problema (Formatos permitidos: PNG, JPG, JPEG, WEBP).    |
+| Campo      | Tipo       | Requerido | Descripción                                                                           |
+| :--------- | :--------- | :-------- | :------------------------------------------------------------------------------------ |
+| `question` | String     | No\*      | Pregunta del usuario sobre el chat.                                                   |
+| `file`     | File (Img) | No\*      | Archivo de imagen de la máquina/problema (Formatos permitidos: PNG, JPG, JPEG, WEBP). |
 
 > \* Nota: Al menos uno de los dos campos (`question` o `file`) debe estar presente en la petición.
 
 ##### Ejemplo de Petición (Postman Form-data)
-* `question` (Text): "¿Cómo se soluciona este código de error?"
-* `file` (File): `codigo_error_monitor.jpg` (Archivo seleccionado desde disco)
+
+- `question` (Text): "¿Cómo se soluciona este código de error?"
+- `file` (File): `codigo_error_monitor.jpg` (Archivo seleccionado desde disco)
 
 #### Respuestas
 
 - **`200 OK` (Respuesta Generada y Guardada):**
+
   ```json
   {
     "answer": "El código de error en la pantalla indica una batería baja. Deberá conectar el monitor multiparamétrico a la red eléctrica...",
@@ -1054,9 +1075,9 @@ Elimina una sesión de chat específica y todos sus mensajes asociados en cascad
 
 #### Parámetros
 
-| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                     |
-| :---------- | :-------- | :--- | :-------- | :---------------------------------------------- |
-| `sessionId` | Path      | UUID | Sí        | Identificador único de la sesión a eliminar.    |
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                  |
+| :---------- | :-------- | :--- | :-------- | :------------------------------------------- |
+| `sessionId` | Path      | UUID | Sí        | Identificador único de la sesión a eliminar. |
 
 #### Respuestas
 
@@ -1075,13 +1096,14 @@ Permite al usuario marcar una sesión de chat como cerrada/inactiva. Una vez cer
 
 #### Parámetros
 
-| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                     |
-| :---------- | :-------- | :--- | :-------- | :---------------------------------------------- |
-| `sessionId` | Path      | UUID | Sí        | Identificador único de la sesión a cerrar.      |
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                |
+| :---------- | :-------- | :--- | :-------- | :----------------------------------------- |
+| `sessionId` | Path      | UUID | Sí        | Identificador único de la sesión a cerrar. |
 
 #### Respuestas
 
 - **`200 OK` (Sesión Cerrada Exitosamente):**
+
   ```json
   {
     "id": "3c0b89ea-2f22-4a0b-9dcf-f25b29dbf0a2",
@@ -1112,13 +1134,14 @@ Registra una calificación positiva (`liked` = `true`) para un mensaje específi
 
 #### Parámetros
 
-| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                     |
-| :---------- | :-------- | :--- | :-------- | :---------------------------------------------- |
-| `messageId` | Path      | UUID | Sí        | Identificador único del mensaje a calificar.    |
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                  |
+| :---------- | :-------- | :--- | :-------- | :------------------------------------------- |
+| `messageId` | Path      | UUID | Sí        | Identificador único del mensaje a calificar. |
 
 #### Respuestas
 
 - **`200 OK` (Mensaje Calificado Exitosamente):**
+
   ```json
   {
     "id": "d1a63cde-f1b2-4d2c-8ab5-f12b2a75908e",
@@ -1153,13 +1176,14 @@ Registra una calificación negativa (`liked` = `false`) para un mensaje específ
 
 #### Parámetros
 
-| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                     |
-| :---------- | :-------- | :--- | :-------- | :---------------------------------------------- |
-| `messageId` | Path      | UUID | Sí        | Identificador único del mensaje a calificar.    |
+| Parámetro   | Ubicación | Tipo | Requerido | Descripción                                  |
+| :---------- | :-------- | :--- | :-------- | :------------------------------------------- |
+| `messageId` | Path      | UUID | Sí        | Identificador único del mensaje a calificar. |
 
 #### Respuestas
 
 - **`200 OK` (Mensaje Calificado Exitosamente):**
+
   ```json
   {
     "id": "d1a63cde-f1b2-4d2c-8ab5-f12b2a75908e",
@@ -1184,12 +1208,57 @@ Registra una calificación negativa (`liked` = `false`) para un mensaje específ
 
 ---
 
+### 4.9 [ADMIN] Obtener Métricas de Chatbot
+
+Permite a los administradores obtener un resumen de métricas del chatbot (satisfacción, total de sesiones, mensajes, likes/dislikes) y un listado de los últimos mensajes calificados con "dislike" con sus respectivas preguntas.
+
+- **URL:** `/api/admin/chat/metrics`
+- **Método HTTP:** `GET`
+- **Rol requerido:** `ADMIN`
+- **Parámetros de Consulta:**
+  - `limit` (opcional, entero, por defecto `50`): Limita la cantidad de mensajes con dislike a retornar en el listado detallado.
+
+#### Respuestas
+
+- **`200 OK` (Consulta Exitosa):**
+
+  ```json
+  {
+    "summary": {
+      "totalSessions": 15,
+      "totalMessages": 120,
+      "totalModelMessages": 60,
+      "totalRatedMessages": 45,
+      "totalLikes": 35,
+      "totalDislikes": 10,
+      "satisfactionRate": 77.78
+    },
+    "recentDislikes": [
+      {
+        "messageId": "bfa4429e-cd56-42d4-a0fb-4050b13cf0ea",
+        "sessionId": "a7b3c2d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+        "userQuestion": "¿Cómo calibro el sensor de temperatura?",
+        "chatbotAnswer": "Lo siento, no encuentro instrucciones sobre la calibración de temperatura en los manuales de equipos médicos.",
+        "createdAt": "2026-07-21T10:15:30"
+      }
+    ]
+  }
+  ```
+
+- **`401 Unauthorized` (Usuario no autenticado):**
+  Retorna un cuerpo vacío con el estado `401`.
+
+- **`403 Forbidden` (Usuario autenticado pero sin rol ADMIN o TECHNICIAN):**
+  Retorna un cuerpo vacío con el estado `403`.
+
+---
+
 ## 5. Soporte Técnico en Vivo y WebSockets
 
 Esta sección describe la API REST y la especificación de comunicación en tiempo real (WebSockets) para el chat de soporte técnico directo entre clientes y técnicos (empleados), y el acceso a transcripciones para administradores.
 
 > [!NOTE]
-> **Control de Inactividad Automático (Soporte en Vivo):** Las sesiones de soporte en estado **`ACTIVE`** (con un técnico asignado) se monitorean continuamente. Si el usuario no envía ningún mensaje en **15 minutos** (configurable mediante `inactivity.prompt.seconds`), el sistema registrará e insertará un mensaje recordatorio del emisor tipo **`SYSTEM`** en el historial: *¿Sigues ahí o pudiste solucionar el problema?*, notificándolo vía WebSockets a ambas partes. Si transcurren **15 minutos** adicionales (configurable mediante `inactivity.close.seconds`) sin respuesta del usuario común, la sesión de soporte se dará por resuelta y finalizará automáticamente (`status = RESOLVED`, `closedAt = timestamp`). Cualquier mensaje nuevo del cliente reinicia ambos temporizadores a cero.
+> **Control de Inactividad Automático (Soporte en Vivo):** Las sesiones de soporte en estado **`ACTIVE`** (con un técnico asignado) se monitorean continuamente. Si el usuario no envía ningún mensaje en **15 minutos** (configurable mediante `inactivity.prompt.seconds`), el sistema registrará e insertará un mensaje recordatorio del emisor tipo **`SYSTEM`** en el historial: _¿Sigues ahí o pudiste solucionar el problema?_, notificándolo vía WebSockets a ambas partes. Si transcurren **15 minutos** adicionales (configurable mediante `inactivity.close.seconds`) sin respuesta del usuario común, la sesión de soporte se dará por resuelta y finalizará automáticamente (`status = RESOLVED`, `closedAt = timestamp`). Cualquier mensaje nuevo del cliente reinicia ambos temporizadores a cero.
 
 ### 5.1 Solicitar Soporte Técnico (Cliente)
 
@@ -1204,6 +1273,7 @@ Adicionalmente, esta acción notifica inmediatamente a todos los técnicos conec
 #### Respuestas
 
 - **`200 OK` (Sesión Creada en Espera):**
+
   ```json
   {
     "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
@@ -1239,6 +1309,7 @@ Obtiene la sesión de soporte activa o en espera (`WAITING`, `ACTIVE`, `PENDING_
 #### Respuestas
 
 - **`200 OK` (Sesión Activa Encontrada):**
+
   ```json
   {
     "id": "a90df23a-f3c8-47c0-a7d5-865f04a60124",
@@ -1262,6 +1333,7 @@ Obtiene la sesión de soporte activa o en espera (`WAITING`, `ACTIVE`, `PENDING_
 ### 5.3 Obtener Mensajes de una Sesión
 
 Obtiene el historial completo de mensajes en orden cronológico de una conversación de soporte, bajo las siguientes restricciones de visibilidad:
+
 - **`CLIENT`**: Puede ver los mensajes únicamente si la sesión le pertenece.
 - **`TECHNICIAN`**: Puede ver los mensajes únicamente si la sesión está **`ACTIVE`** y está asignado a ella. No puede ver mensajes de sesiones finalizadas/cerradas.
 - **`ADMIN`**: Puede ver los mensajes de cualquier sesión (activa o cerrada) para auditoría e historial.
@@ -1273,6 +1345,7 @@ Obtiene el historial completo de mensajes en orden cronológico de una conversac
 #### Respuestas
 
 - **`200 OK`:**
+
   ```json
   [
     {
@@ -1306,6 +1379,7 @@ Obtiene el historial completo de mensajes en orden cronológico de una conversac
 ### 5.4 Aceptar Sesión de Soporte (Técnico)
 
 Permite a un técnico aceptar una sesión de soporte que se encuentra en espera (`WAITING`). La petición se gestiona a través de una cola FIFO concurrente con bloqueo pesimista en base de datos.
+
 - Valida que el técnico tenga un número de sesiones activas simultáneas menor al límite máximo configurado (por defecto, `3`).
 - Cambia el estado a `ACTIVE` y asocia al técnico.
 
@@ -1482,7 +1556,9 @@ Establece una conexión en tiempo real bidireccional para chatear.
 #### Protocolo de Mensajería JSON (Eventos y Respuestas)
 
 ##### 5.10.1 Solicitar Soporte vía WebSocket (`REQUEST_SUPPORT`)
+
 El cliente (`CLIENT`) puede iniciar una solicitud de soporte técnico. El servidor responderá con el evento `SESSION_STATUS` de forma inmediata.
+
 ```json
 {
   "type": "REQUEST_SUPPORT"
@@ -1490,7 +1566,9 @@ El cliente (`CLIENT`) puede iniciar una solicitud de soporte técnico. El servid
 ```
 
 ##### 5.10.2 Aceptar Soporte vía WebSocket (`ACCEPT_SUPPORT`)
+
 Un técnico (`TECHNICIAN`) puede aceptar y reclamar un chat de soporte en espera.
+
 ```json
 {
   "type": "ACCEPT_SUPPORT",
@@ -1499,7 +1577,9 @@ Un técnico (`TECHNICIAN`) puede aceptar y reclamar un chat de soporte en espera
 ```
 
 ##### 5.10.3 Cerrar Soporte vía WebSocket (`CLOSE_SUPPORT`)
+
 El técnico asignado (`TECHNICIAN`) puede dar por finalizada la sesión de soporte de forma directa.
+
 ```json
 {
   "type": "CLOSE_SUPPORT",
@@ -1508,7 +1588,9 @@ El técnico asignado (`TECHNICIAN`) puede dar por finalizada la sesión de sopor
 ```
 
 ##### 5.10.4 Enviar Mensaje (Cliente)
+
 Envía un mensaje a la sesión activa del cliente.
+
 ```json
 {
   "type": "MESSAGE",
@@ -1517,7 +1599,9 @@ Envía un mensaje a la sesión activa del cliente.
 ```
 
 ##### 5.10.5 Enviar Mensaje (Técnico)
+
 Envía un mensaje indicando el `sessionId`.
+
 ```json
 {
   "type": "MESSAGE",
@@ -1527,7 +1611,9 @@ Envía un mensaje indicando el `sessionId`.
 ```
 
 ##### 5.10.6 Mensaje Recibido (Ambas Partes)
+
 El servidor reenvía el mensaje en tiempo real con este formato:
+
 ```json
 {
   "type": "MESSAGE",
@@ -1541,7 +1627,9 @@ El servidor reenvía el mensaje en tiempo real con este formato:
 ```
 
 ##### 5.10.7 Alerta de Estado de la Sesión (`SESSION_STATUS`)
+
 Notificación enviada al cliente confirmando el estado actual de su solicitud de soporte.
+
 ```json
 {
   "type": "SESSION_STATUS",
@@ -1551,7 +1639,9 @@ Notificación enviada al cliente confirmando el estado actual de su solicitud de
 ```
 
 ##### 5.10.8 Alerta de Sesión Aceptada/Asignada (`SESSION_ACCEPTED`)
+
 Enviada tanto al cliente como al técnico en tiempo real cuando un técnico acepta la sesión de soporte:
+
 ```json
 {
   "type": "SESSION_ACCEPTED",
@@ -1562,7 +1652,9 @@ Enviada tanto al cliente como al técnico en tiempo real cuando un técnico acep
 ```
 
 ##### 5.10.9 Notificación de Cierre de Sesión (`SESSION_CLOSED`)
+
 El servidor avisa que la sesión fue cerrada de forma definitiva.
+
 ```json
 {
   "type": "SESSION_CLOSED",
@@ -1571,8 +1663,10 @@ El servidor avisa que la sesión fue cerrada de forma definitiva.
 ```
 
 ##### 5.10.10 Respuestas Automáticas del Sistema (`SYSTEM_MESSAGE`)
+
 Mensajes generados de forma automática por el backend para notificar eventos clave al cliente:
-* **Si el cliente escribe en estado de espera (`WAITING`):**
+
+- **Si el cliente escribe en estado de espera (`WAITING`):**
   ```json
   {
     "type": "SYSTEM_MESSAGE",
@@ -1581,7 +1675,7 @@ Mensajes generados de forma automática por el backend para notificar eventos cl
     "createdAt": "2026-07-07T11:33:15"
   }
   ```
-* **Si el técnico cierra la sesión de soporte:**
+- **Si el técnico cierra la sesión de soporte:**
   ```json
   {
     "type": "SYSTEM_MESSAGE",
@@ -1590,7 +1684,7 @@ Mensajes generados de forma automática por el backend para notificar eventos cl
     "createdAt": "2026-07-07T11:35:10"
   }
   ```
-* **Si se cierra la sesión de soporte por inactividad:**
+- **Si se cierra la sesión de soporte por inactividad:**
   ```json
   {
     "type": "SYSTEM_MESSAGE",
@@ -1601,7 +1695,9 @@ Mensajes generados de forma automática por el backend para notificar eventos cl
   ```
 
 ##### 5.10.11 Alerta de Nueva Solicitud en Espera (`NEW_WAITING_SESSION`)
+
 El servidor avisa a todos los técnicos en tiempo real que un cliente acaba de solicitar soporte técnico y se encuentra esperando un técnico asignado, adjuntando el resumen generado.
+
 ```json
 {
   "type": "NEW_WAITING_SESSION",
@@ -1613,7 +1709,9 @@ El servidor avisa a todos los técnicos en tiempo real que un cliente acaba de s
 ```
 
 ##### 5.10.12 Alerta de Sesión Reclamada (`SESSION_CLAIMED`)
+
 El servidor avisa a todos los técnicos que una sesión de la lista de espera ya fue reclamada y debe removerse de la bandeja.
+
 ```json
 {
   "type": "SESSION_CLAIMED",
@@ -1622,12 +1720,12 @@ El servidor avisa a todos los técnicos que una sesión de la lista de espera ya
 ```
 
 ##### 5.10.13 Mensaje de Error
+
 El servidor responde con este formato en caso de infracciones (como chatear sin una sesión activa o sobre una sesión cerrada).
+
 ```json
 {
   "type": "ERROR",
   "message": "Error: La sesión de soporte está cerrada y no permite enviar más mensajes."
 }
 ```
-
-
