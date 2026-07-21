@@ -28,6 +28,10 @@ public class DocumentService {
 
     @Transactional
     public Document uploadDocument(String filename, String contentType, byte[] fileData) {
+        if (documentRepository.countByStatus("PROCESSING") >= 3) {
+            throw new IllegalArgumentException("Ya hay 3 documentos procesándose en este momento. Por favor, espere a que finalicen.");
+        }
+
         // Generar un nombre único de archivo y sanitizarlo para evitar problemas con S3 / Supabase Storage
         String uniqueId = UUID.randomUUID().toString();
         String sanitizedFilename = sanitizeFilename(filename);
