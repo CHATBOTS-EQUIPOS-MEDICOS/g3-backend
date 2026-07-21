@@ -12,6 +12,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +38,7 @@ public class DocumentEventListener {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener
     public void handleDocumentIngested(DocumentIngestedEvent event) {
         UUID docId = event.getDocumentId();
         log.info("Iniciando procesamiento asíncrono del documento ID: {}", docId);
@@ -94,7 +95,7 @@ public class DocumentEventListener {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener
     public void handleDocumentDeleted(DocumentDeletedEvent event) {
         UUID docId = event.getDocumentId();
         String storagePath = event.getStoragePath();
