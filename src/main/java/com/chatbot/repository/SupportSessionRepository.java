@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,4 +45,7 @@ public interface SupportSessionRepository extends JpaRepository<SupportSession, 
 
     @Query("SELECT s FROM SupportSession s JOIN FETCH s.user LEFT JOIN FETCH s.support WHERE s.id = :id")
     Optional<SupportSession> findByIdWithUserAndSupport(@Param("id") UUID id);
+
+    @Query("SELECT s.createdAt FROM SupportSession s WHERE s.createdAt >= :since")
+    List<LocalDateTime> findCreatedDatesSince(@Param("since") LocalDateTime since);
 }
