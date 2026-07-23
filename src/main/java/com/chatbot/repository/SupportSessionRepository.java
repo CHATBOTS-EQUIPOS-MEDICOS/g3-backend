@@ -43,6 +43,9 @@ public interface SupportSessionRepository extends JpaRepository<SupportSession, 
     @Query("SELECT s FROM SupportSession s JOIN FETCH s.user LEFT JOIN FETCH s.support WHERE s.user = :user AND s.status IN :statuses ORDER BY s.createdAt DESC")
     List<SupportSession> findActiveSessionsWithUserAndSupport(@Param("user") User user, @Param("statuses") List<SupportStatus> statuses);
 
+    @Query("SELECT s FROM SupportSession s JOIN FETCH s.user LEFT JOIN FETCH s.support WHERE s.user.id = :userId AND s.status IN :statuses ORDER BY s.createdAt DESC")
+    List<SupportSession> findActiveSessionsByUserIdWithUserAndSupport(@Param("userId") UUID userId, @Param("statuses") List<SupportStatus> statuses);
+
     @Query("SELECT s FROM SupportSession s JOIN FETCH s.user LEFT JOIN FETCH s.support WHERE s.id = :id")
     Optional<SupportSession> findByIdWithUserAndSupport(@Param("id") UUID id);
 

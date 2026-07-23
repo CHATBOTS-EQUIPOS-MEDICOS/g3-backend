@@ -14,12 +14,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -40,13 +42,15 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         try {
             UUID userId = UUID.fromString((String) session.getAttributes().get("userId"));
-            userSessions.put(userId, session);
+            WebSocketSession decorator = new ConcurrentWebSocketSessionDecorator(session, 5000, 64 * 1024);
+            userSessions.put(userId, decorator);
             String role = (String) session.getAttributes().get("role");
             log.info("WebSocket connection established. User: {}, Role: {}", userId, role);
 
             // Si es un cliente y tiene una sesión activa, notificarle de su conexión
             if ("CLIENT".equals(role)) {
                 supportService.findActiveSession(userId).ifPresent(supportSession -> {
+                    session.getAttributes().put("activeSupportSession", supportSession);
                     sendToUser(userId, Map.of(
                             "type", "SESSION_STATUS",
                             "sessionId", supportSession.getId(),
@@ -65,6 +69,7 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
         try {
             UUID userId = UUID.fromString((String) session.getAttributes().get("userId"));
             userSessions.remove(userId);
+            session.getAttributes().clear();
             log.info("WebSocket connection closed. User: {}", userId);
         } catch (Exception e) {
             log.error("Error in afterConnectionClosed: {}", e.getMessage(), e);
@@ -84,12 +89,21 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                 String content = jsonNode.get("content").asText();
 
                 if ("CLIENT".equals(role)) {
-                    // El cliente envía un mensaje. Buscamos su sesión de soporte activa
-                    SupportSession supportSession = supportService.findActiveSession(senderId)
-                            .orElseThrow(() -> new IllegalStateException("No tienes una sesión de soporte activa. Por favor, solicita soporte técnico primero."));
+                    // El cliente envía un mensaje. Obtenemos sesión desde caché o DB
+                    SupportSession supportSession = (SupportSession) session.getAttributes().get("activeSupportSession");
+                    if (supportSession == null || supportSession.getStatus() == SupportStatus.RESOLVED || supportSession.getStatus() == SupportStatus.EXPIRED) {
+                        supportSession = supportService.findActiveSession(senderId)
+                                .orElseThrow(() -> new IllegalStateException("No tienes una sesión de soporte activa. Por favor, solicita soporte técnico primero."));
+                        session.getAttributes().put("activeSupportSession", supportSession);
+                    } else if (supportSession.getStatus() == SupportStatus.WAITING) {
+                        // Refrescar para verificar si ya fue asignado a un técnico
+                        SupportSession reloaded = supportService.getSessionById(supportSession.getId()).orElse(supportSession);
+                        session.getAttributes().put("activeSupportSession", reloaded);
+                        supportSession = reloaded;
+                    }
                     
-                    // Guardar el mensaje en la base de datos
-                    Message dbMessage = supportService.saveMessage(supportSession.getId(), senderId, SenderType.USER, content);
+                    // Guardar el mensaje en la base de datos usando objeto precargado (1 solo INSERT directo)
+                    Message dbMessage = supportService.saveMessage(supportSession, senderId, SenderType.USER, content);
 
                     Map<String, Object> payload = Map.of(
                             "type", "MESSAGE",
@@ -101,7 +115,7 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                             "createdAt", dbMessage.getCreatedAt().toString()
                     );
 
-                    // Reenviar el mensaje al cliente (para confirmar recepción)
+                    // Reenviar el mensaje al cliente (para confirmar recepción con ID real)
                     sendToUser(senderId, payload);
 
                     // Si la sesión está activa y tiene un técnico asignado, reenviarle el mensaje
@@ -124,8 +138,12 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                         return;
                     }
                     UUID sessionId = UUID.fromString(jsonNode.get("sessionId").asText());
-                    SupportSession supportSession = supportService.getSessionById(sessionId)
-                            .orElseThrow(() -> new IllegalArgumentException("Sesión de soporte no encontrada."));
+                    SupportSession supportSession = (SupportSession) session.getAttributes().get("techSession_" + sessionId);
+                    if (supportSession == null) {
+                        supportSession = supportService.getSessionById(sessionId)
+                                .orElseThrow(() -> new IllegalArgumentException("Sesión de soporte no encontrada."));
+                        session.getAttributes().put("techSession_" + sessionId, supportSession);
+                    }
 
                     // Verificar que el técnico sea el asignado
                     if (supportSession.getSupport() == null || !supportSession.getSupport().getId().equals(senderId)) {
@@ -133,8 +151,8 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                         return;
                     }
 
-                    // Guardar el mensaje en la base de datos
-                    Message dbMessage = supportService.saveMessage(sessionId, senderId, SenderType.TECHNICIAN, content);
+                    // Guardar el mensaje en la base de datos usando objeto precargado
+                    Message dbMessage = supportService.saveMessage(supportSession, senderId, SenderType.TECHNICIAN, content);
 
                     Map<String, Object> payload = Map.of(
                             "type", "MESSAGE",
@@ -159,6 +177,7 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                     return;
                 }
                 SupportSession activeSession = supportService.findOrCreateActiveSession(senderId);
+                session.getAttributes().put("activeSupportSession", activeSession);
                 sendToUser(senderId, Map.of(
                         "type", "SESSION_STATUS",
                         "sessionId", activeSession.getId(),
@@ -195,6 +214,8 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                 }
 
                 supportService.closeSession(sessionId);
+                session.getAttributes().remove("activeSupportSession");
+                session.getAttributes().remove("techSession_" + sessionId);
             } else if ("PING".equals(type)) {
                 sendToUser(senderId, Map.of("type", "PONG"));
             }
@@ -250,5 +271,20 @@ public class SupportWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         });
+    }
+
+    public void updateClientCachedSession(UUID userId, SupportSession session) {
+        WebSocketSession wsSession = userSessions.get(userId);
+        if (wsSession != null) {
+            wsSession.getAttributes().put("activeSupportSession", session);
+        }
+    }
+
+    public void clearClientCachedSession(UUID userId, UUID sessionId) {
+        WebSocketSession wsSession = userSessions.get(userId);
+        if (wsSession != null) {
+            wsSession.getAttributes().remove("activeSupportSession");
+            wsSession.getAttributes().remove("techSession_" + sessionId);
+        }
     }
 }

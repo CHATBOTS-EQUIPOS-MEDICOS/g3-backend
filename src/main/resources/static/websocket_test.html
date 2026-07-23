@@ -450,13 +450,24 @@
             }
         }
 
+        const scrollScheduled = new Map();
+        function scrollToBottom(chatBox) {
+            if (!scrollScheduled.get(chatBox)) {
+                scrollScheduled.set(chatBox, true);
+                requestAnimationFrame(() => {
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    scrollScheduled.set(chatBox, false);
+                });
+            }
+        }
+
         function appendMessage(panelRole, senderType, content) {
             const chatBox = document.getElementById(`${panelRole}-chat`);
             const div = document.createElement('div');
             div.className = `message ${senderType}`;
             div.innerText = content;
             chatBox.appendChild(div);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            scrollToBottom(chatBox);
         }
 
         function addSystemMessage(panelRole, content) {
@@ -465,7 +476,7 @@
             div.className = 'message system';
             div.innerText = content;
             chatBox.appendChild(div);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            scrollToBottom(chatBox);
         }
 
         function updateStatusBadge(role, status) {

@@ -62,13 +62,19 @@ public class SupportService {
      * Busca la sesión de soporte activa o en espera de un usuario.
      */
     public Optional<SupportSession> findActiveSession(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + userId));
-        
-        List<SupportSession> sessions = supportSessionRepository.findActiveSessionsWithUserAndSupport(
-                user, 
+        List<SupportSession> sessions = supportSessionRepository.findActiveSessionsByUserIdWithUserAndSupport(
+                userId, 
                 Arrays.asList(SupportStatus.WAITING, SupportStatus.ACTIVE, SupportStatus.PENDING_USER)
         );
+        if (sessions.isEmpty()) {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                sessions = supportSessionRepository.findActiveSessionsWithUserAndSupport(
+                        user,
+                        Arrays.asList(SupportStatus.WAITING, SupportStatus.ACTIVE, SupportStatus.PENDING_USER)
+                );
+            }
+        }
         return sessions.stream().findFirst();
     }
 
@@ -143,31 +149,52 @@ public class SupportService {
     }
 
     /**
-     * Guarda un mensaje en la sesión de soporte.
+     * Guarda un mensaje en la sesión de soporte utilizando el objeto SupportSession ya cargado.
      */
     @Transactional
-    public Message saveMessage(UUID sessionId, UUID senderId, SenderType senderType, String content) {
-        SupportSession session = supportSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Sesión de soporte no encontrada con ID: " + sessionId));
+    public Message saveMessage(SupportSession session, UUID senderId, SenderType senderType, String content) {
+        return savePreallocatedMessage(null, session, senderId, senderType, content, LocalDateTime.now());
+    }
 
+    /**
+     * Guarda un mensaje con ID y timestamp opcionalmente pre-asignados.
+     */
+    @Transactional
+    public Message savePreallocatedMessage(UUID messageId, SupportSession session, UUID senderId, SenderType senderType, String content, LocalDateTime createdAt) {
         if (session.getStatus() == SupportStatus.RESOLVED || session.getStatus() == SupportStatus.EXPIRED) {
             throw new IllegalStateException("La sesión de soporte está cerrada y no permite enviar más mensajes.");
         }
 
         Message message = new Message();
+        if (messageId != null) {
+            message.setId(messageId);
+        }
         message.setSession(session);
         message.setSenderId(senderId);
         message.setSenderType(senderType);
         message.setContent(content);
-        message.setCreatedAt(LocalDateTime.now());
+        message.setCreatedAt(createdAt != null ? createdAt : LocalDateTime.now());
 
         if (senderType == SenderType.USER) {
-            session.setLastUserActivity(LocalDateTime.now());
-            session.setPromptSent(false);
-            supportSessionRepository.save(session);
+            LocalDateTime now = LocalDateTime.now();
+            if (session.getLastUserActivity() == null || session.getLastUserActivity().isBefore(now.minusSeconds(5))) {
+                session.setLastUserActivity(now);
+                session.setPromptSent(false);
+                supportSessionRepository.save(session);
+            }
         }
 
         return messageRepository.save(message);
+    }
+
+    /**
+     * Guarda un mensaje en la sesión de soporte buscando por sessionId.
+     */
+    @Transactional
+    public Message saveMessage(UUID sessionId, UUID senderId, SenderType senderType, String content) {
+        SupportSession session = supportSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Sesión de soporte no encontrada con ID: " + sessionId));
+        return saveMessage(session, senderId, senderType, content);
     }
 
     /**
@@ -232,6 +259,8 @@ public class SupportService {
         SupportSession updatedSession = supportSessionRepository.save(session);
         log.info("Support session {} accepted and assigned to technician {}", sessionId, technicianId);
 
+        webSocketHandler.updateClientCachedSession(session.getUser().getId(), updatedSession);
+
         // Notificar al cliente
         webSocketHandler.sendToUser(session.getUser().getId(), Map.of(
                 "type", "SESSION_ACCEPTED",
@@ -272,6 +301,8 @@ public class SupportService {
 
         SupportSession updatedSession = supportSessionRepository.save(session);
         log.info("Support session {} resolved/closed", sessionId);
+
+        webSocketHandler.clearClientCachedSession(session.getUser().getId(), sessionId);
 
         // Notificar al cliente con un mensaje de sistema y luego cerrar
         webSocketHandler.sendToUser(session.getUser().getId(), Map.of(
