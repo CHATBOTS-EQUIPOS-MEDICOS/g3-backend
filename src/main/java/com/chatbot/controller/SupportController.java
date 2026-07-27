@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/support")
-@CrossOrigin(origins = "http://localhost:4200")
 public class SupportController {
 
     private static final Logger log = LoggerFactory.getLogger(SupportController.class);
