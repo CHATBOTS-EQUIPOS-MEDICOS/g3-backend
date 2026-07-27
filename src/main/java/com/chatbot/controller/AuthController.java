@@ -10,8 +10,9 @@ import com.chatbot.model.User;
 import com.chatbot.service.AuthService;
 
 import java.util.UUID;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -43,13 +44,15 @@ public class AuthController {
         User user = authService.getUserByEmail(request.getEmail());
         String roleName = user.getId_rol().getNameRol().name();
 
-        // 1. Cookie HttpOnly para el token JWT (Seguro contra XSS)
-        Cookie tokenCookie = new Cookie("token", token);
-        tokenCookie.setHttpOnly(true);
-        tokenCookie.setSecure(false); // false para soportar pruebas locales en http://localhost
-        tokenCookie.setPath("/");
-        tokenCookie.setMaxAge(86400); // 24 horas
-        response.addCookie(tokenCookie);
+        // Cookie HttpOnly + Secure + SameSite=None para peticiones cross-domain sobre HTTPS
+        ResponseCookie tokenCookie = ResponseCookie.from("token", token)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(86400) // 24 horas
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, tokenCookie.toString());
 
         AuthResponse authResponse = new AuthResponse(
                 user.getFullName(),
@@ -63,12 +66,14 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<AuthResponse> logout(HttpServletResponse response) {
         // Limpiar la cookie del token JWT
-        Cookie tokenCookie = new Cookie("token", null);
-        tokenCookie.setHttpOnly(true);
-        tokenCookie.setSecure(false);
-        tokenCookie.setPath("/");
-        tokenCookie.setMaxAge(0); // Eliminar
-        response.addCookie(tokenCookie);
+        ResponseCookie tokenCookie = ResponseCookie.from("token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0) // Eliminar
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, tokenCookie.toString());
 
         AuthResponse authResponse = new AuthResponse(
                 null,
